@@ -1,0 +1,51 @@
+{
+  "expo": {
+    "name": "Daily Bread",
+    "slug": "daily-bread",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "daily-bread",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": false,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.dailybread.dailyfaithbible"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "extra": {
+      "firebaseApiKey": "AIzaSyDbcPSejp8kJKEJBomRtAvPsWCAz9HSCCg",
+      "firebaseAuthDomain": "daily-bread-88f42.firebaseapp.com",
+      "firebaseProjectId": "daily-bread-88f42",
+      "firebaseStorageBucket": "daily-bread-88f42.firebasestorage.app",
+      "firebaseMessagingSenderId": "354959331079",
+      "firebaseAppId": "1:354959331079:android:7484ecb8076d9ee686ffa2",
+      "firebaseDatabaseUrl": "https://daily-bread-88f42.firebaseio.com",
+      "router": {},
+      "eas": {
+        "projectId": "bef64528-a022-46ea-8d92-de6ba1b001da"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-web-browser",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.354959331079-faisqnjq2nd81nrhnikm2t0clfc49kle"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "android": {
+      "package": "com.dailybread.dailyfaithbible"
+    }
+  }
+}
