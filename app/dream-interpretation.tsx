@@ -45,20 +45,11 @@ const { width: screenWidth } = Dimensions.get('window');
 
 type MoodOption = 'peaceful' | 'anxious' | 'joyful' | 'confused' | 'hopeful';
 
-// ⚠️ MOCK REWARDED AD SERVICE ⚠️
-// Replace this with a real ad library like Google AdMob in a production app.
-const RewardedAdService = {
-  showAd: async (): Promise<boolean> => {
-    return new Promise((resolve) => {
-      console.log('🎬 Simulating rewarded ad...');
-      setTimeout(() => {
-        console.log('✅ Ad watched successfully.');
-        Alert.alert('Video Ad Watched!', 'You\'re one step closer to unlocking the analysis.', [{ text: 'OK' }]);
-        resolve(true);
-      }, 3000); // Simulate a 3-second ad
-    });
-  }
-};
+// Real AdMob Rewarded Ad Service
+import { AdManager } from '../lib/adMobService';
+import { ADS_CONFIG } from '../lib/adsConfig';
+
+const rewardedAdService = AdManager.getRewarded(ADS_CONFIG.ADMOB.REWARDED_ID);
 
 // =================================================================================
 // Access Modal Component - The Paywall
@@ -241,10 +232,19 @@ export default function DreamInterpretationScreen() {
   const handleWatchAd = async () => {
     if (adsWatchedCount < 2) {
       setIsAdLoading(true);
-      const adSuccess = await RewardedAdService.showAd();
-      setIsAdLoading(false);
-      if (adSuccess) {
-        setAdsWatchedCount(prev => prev + 1);
+      try {
+        const result = await rewardedAdService.showAd();
+        if (result.success) {
+          setAdsWatchedCount(prev => prev + 1);
+          Alert.alert('Video Ad Watched!', 'You\'re one step closer to unlocking the analysis.', [{ text: 'OK' }]);
+        } else {
+          Alert.alert('Ad Error', 'Failed to load the ad. Please try again.', [{ text: 'OK' }]);
+        }
+      } catch (error) {
+        console.error('Error showing rewarded ad:', error);
+        Alert.alert('Ad Error', 'Failed to load the ad. Please try again.', [{ text: 'OK' }]);
+      } finally {
+        setIsAdLoading(false);
       }
     }
   };

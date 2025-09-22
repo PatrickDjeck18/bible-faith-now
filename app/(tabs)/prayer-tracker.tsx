@@ -67,6 +67,9 @@ import BackgroundGradient from '../../components/BackgroundGradient';
 import { router } from 'expo-router';
 import AddPrayerModal from '../../components/AddPrayerModal';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { ModernHeader } from '@/components/ModernHeader';
+import BannerAd from '@/components/BannerAd';
+import { useInterstitialAds } from '@/hooks/useInterstitialAds';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -114,6 +117,7 @@ const categories = [
 export default function PrayerTrackerScreen() {
   const { user } = useAuth();
   const tabBarHeight = useBottomTabBarHeight();
+  const { showInterstitialAd } = useInterstitialAds('prayer');
   const [prayers, setPrayers] = useState<Prayer[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -503,70 +507,31 @@ export default function PrayerTrackerScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       
-      {/* Clean White Header */}
-      <View style={styles.headerSimple}>
-        <View style={styles.headerSimpleContent}>
-          <View style={styles.headerSimpleLeft}>
-            <View style={styles.headerSimpleIcon}>
-              <Heart size={28} color={Colors.primary[600]} />
-            </View>
-            <View>
-              <Text style={styles.headerSimpleTitle}>Prayer Tracker</Text>
-              <Text style={styles.headerSimpleSubtitle}>
-                Track your spiritual journey
-              </Text>
-            </View>
-          </View>
-          <TouchableOpacity
-            style={styles.headerSimpleAddButton}
-            onPress={() => setIsAddModalVisible(true)}
-          >
-            <Plus size={20} color={Colors.primary[600]} />
-          </TouchableOpacity>
-        </View>
-      </View>
+      {/* Modern Header */}
+      <ModernHeader
+        title="Prayer Tracker"
+        subtitle="Track your spiritual journey"
+        variant="simple"
+        showProfileButton={true}
+        onProfilePress={() => {
+          router.push('/(tabs)/profile');
+        }}
+      />
+      
+      {/* Banner Ad below header */}
+      <BannerAd placement="prayer" />
 
       <BackgroundGradient>
-        {/* Header Card */}
-        <View style={styles.headerCardContainer}>
-          <View style={styles.headerCard}>
-            <View style={styles.headerCardContent}>
-              <View style={styles.headerCardIcon}>
-                <Heart size={32} color={Colors.primary[600]} />
-              </View>
-              <View style={styles.headerCardText}>
-                <Text style={[styles.headerCardTitle, { color: Colors.neutral[900] }]}>Prayer Journal</Text>
-                <Text style={[styles.headerCardDescription, { color: Colors.neutral[700] }]}>Track your spiritual journey</Text>
-                
-                {/* Quick Stats */}
-                <View style={styles.quickStatsContainer}>
-                  <View style={styles.statItem}>
-                    <Text style={[styles.statNumber, { color: Colors.neutral[900] }]}>{stats.total}</Text>
-                    <Text style={[styles.statLabel, { color: Colors.neutral[700] }]}>Total</Text>
-                  </View>
-                  <View style={styles.statDivider} />
-                  <View style={styles.statItem}>
-                    <Text style={[styles.statNumber, { color: Colors.primary[500] }]}>{stats.active}</Text>
-                    <Text style={[styles.statLabel, { color: Colors.neutral[700] }]}>Active</Text>
-                  </View>
-                  <View style={styles.statDivider} />
-                  <View style={styles.statItem}>
-                    <Text style={[styles.statNumber, { color: Colors.success[500] }]}>{stats.answered}</Text>
-                    <Text style={[styles.statLabel, { color: Colors.neutral[700] }]}>Answered</Text>
-                  </View>
-                </View>
-              </View>
-              <TouchableOpacity
-                style={[styles.headerCardActionButton, { backgroundColor: 'rgba(139, 92, 246, 0.2)' }]}
-                onPress={() => setIsAddModalVisible(true)}
-                activeOpacity={0.8}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Plus size={22} color={Colors.primary[600]} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+        {/* Modern Header with Stats */}
+        <ModernHeader
+          title="Prayer Journal"
+          subtitle="Track your spiritual journey"
+          variant="default"
+          showProfileButton={true}
+          onProfilePress={() => {
+            router.push('/(tabs)/profile');
+          }}
+        />
 
         {/* Search and Filter */}
         <View style={styles.searchContainer}>
@@ -714,7 +679,7 @@ export default function PrayerTrackerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.neutral[50],
+    backgroundColor: Colors.white,
   },
   
   // Header Styles - Matching Mood Tracker
@@ -883,6 +848,11 @@ const styles = StyleSheet.create({
   },
   filterTabActive: {
     backgroundColor: Colors.primary[500],
+    shadowColor: Colors.primary[500],
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   filterTabText: {
     fontSize: 14,
@@ -947,13 +917,13 @@ const styles = StyleSheet.create({
 
   // Prayer Card Styles
   prayerCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 16,
-    padding: Spacing.md,
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
     marginBottom: Spacing.md,
-    ...Shadows.sm,
+    ...Shadows.md,
     borderWidth: 1,
-    borderColor: Colors.neutral[100],
+    borderColor: Colors.neutral[200],
   },
   prayerCardHeader: {
     flexDirection: 'row',

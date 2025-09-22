@@ -14,6 +14,7 @@ import {
   TextInput,
   Modal,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 
 import { ArrowLeft, Book, Bell, Heart, Cloud, Shield, HelpCircle, LogOut, User, Settings as SettingsIcon, ChevronRight, X, CreditCard as Edit3, Save, TestTube } from 'lucide-react-native';
@@ -23,6 +24,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { LinearGradient } from 'expo-linear-gradient';
 import BackgroundGradient from '@/components/BackgroundGradient';
+import { useAds } from '@/hooks/useAds';
+import { Crown, Zap, Star } from 'lucide-react-native';
 
 const { width, height } = Dimensions.get('window');
 const isTablet = width >= 768;
@@ -33,6 +36,7 @@ export default function SettingsScreen() {
   
   const { user, signOut, loading } = useAuth();
   const { profile, updateProfile } = useProfile();
+  const { isPremium, purchasePremium, restorePurchases, isLoading: adsLoading } = useAds();
   
   // Simple settings state
   const [dailyVerse, setDailyVerse] = useState(true);
@@ -435,6 +439,43 @@ export default function SettingsScreen() {
                 <Edit3 size={20} color="#6B7280" />
               </TouchableOpacity>
             </View>
+          </Animated.View>
+
+          {/* Premium Section */}
+          <Animated.View style={[styles.premiumSection, { transform: [{ scale: scaleAnim }] }]}>
+            <SimpleSettingItem
+              icon={<Crown size={20} color={isPremium ? "#10B981" : "#8B5CF6"} />}
+              title={isPremium ? "Premium Member" : "Go Premium"}
+              subtitle={isPremium ? "Ad-free experience active" : "Remove ads and unlock premium features"}
+              rightElement={
+                isPremium ? (
+                  <View style={styles.premiumBadge}>
+                    <Text style={styles.premiumBadgeText}>ACTIVE</Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.upgradeButton}
+                    onPress={() => {
+                      // Open PremiumPurchaseModal
+                      Alert.alert('Premium Upgrade', 'Premium purchase options will be available in the next update.');
+                    }}
+                  >
+                    <Text style={styles.upgradeButtonText}>Upgrade</Text>
+                  </TouchableOpacity>
+                )
+              }
+            />
+            
+            {/* Restore Purchases */}
+            {!isPremium && (
+              <TouchableOpacity
+                style={styles.restoreButton}
+                onPress={restorePurchases}
+                disabled={adsLoading}
+              >
+                <Text style={styles.restoreButtonText}>Restore Purchases</Text>
+              </TouchableOpacity>
+            )}
           </Animated.View>
 
           {/* Simple Settings */}
@@ -844,5 +885,41 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 40,
+  },
+  // Premium Section Styles
+  premiumSection: {
+    marginBottom: 24,
+  },
+  premiumBadge: {
+    backgroundColor: '#10B981',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  premiumBadgeText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  upgradeButton: {
+    backgroundColor: '#8B5CF6',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  upgradeButtonText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  restoreButton: {
+    marginTop: 12,
+    padding: 12,
+    alignItems: 'center',
+  },
+  restoreButtonText: {
+    fontSize: 14,
+    color: '#6B7280',
+    textDecorationLine: 'underline',
   },
 });

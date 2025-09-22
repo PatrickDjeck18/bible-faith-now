@@ -11,6 +11,7 @@ import {
   Platform,
   Alert,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -25,8 +26,12 @@ import {
   Target,
   Award,
   TrendingUp,
+  Zap,
+  Play,
 } from 'lucide-react-native';
 import { useFirebaseQuiz } from '@/hooks/useFirebaseQuiz';
+import { AdManager } from '../lib/adMobService';
+import { ADS_CONFIG } from '../lib/adsConfig';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -38,14 +43,17 @@ interface QuizStats {
   timeElapsed: number;
 }
 
+// Real AdMob Rewarded Ad Service
+const rewardedAdService = AdManager.getRewarded(ADS_CONFIG.ADMOB.REWARDED_ID);
+
 export default function BibleQuizScreen() {
-  const { 
-    quizState, 
-    startQuiz, 
-    answerQuestion, 
-    nextQuestion, 
-    completeQuiz, 
-    getCurrentQuestion, 
+  const {
+    quizState,
+    startQuiz,
+    answerQuestion,
+    nextQuestion,
+    completeQuiz,
+    getCurrentQuestion,
     getProgress,
     stats
   } = useFirebaseQuiz();
@@ -71,6 +79,9 @@ export default function BibleQuizScreen() {
   const [startTime, setStartTime] = useState<number>(Date.now());
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showRewardAdButton, setShowRewardAdButton] = useState(false);
+  const [isAdLoading, setIsAdLoading] = useState(false);
+  const [extraTimeUsed, setExtraTimeUsed] = useState(false);
 
   const currentQuestion = getCurrentQuestion();
   const progress = getProgress();
@@ -126,6 +137,11 @@ export default function BibleQuizScreen() {
   useEffect(() => {
     if (!quizState.isActive || showResult) return;
 
+    // Show reward ad button when time is running low and not already used
+    if (timeRemaining <= 10 && !extraTimeUsed && !showRewardAdButton) {
+      setShowRewardAdButton(true);
+    }
+
     const interval = setInterval(() => {
       setTimeRemaining(prev => {
         if (prev <= 1) {
@@ -137,7 +153,29 @@ export default function BibleQuizScreen() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [quizState.isActive, showResult, currentQuestion]);
+  }, [quizState.isActive, showResult, currentQuestion, timeRemaining, extraTimeUsed, showRewardAdButton]);
+
+  // Handle watching reward ad for extra time
+  const handleWatchRewardAd = async () => {
+    setIsAdLoading(true);
+    try {
+      const result = await rewardedAdService.showAd();
+      if (result.success) {
+        // Add 15 seconds extra time
+        setTimeRemaining(prev => prev + 15);
+        setExtraTimeUsed(true);
+        setShowRewardAdButton(false);
+        Alert.alert('Extra Time!', 'You gained 15 seconds extra time!', [{ text: 'OK' }]);
+      } else {
+        Alert.alert('Ad Error', 'Failed to load the ad. Please try again.', [{ text: 'OK' }]);
+      }
+    } catch (error) {
+      console.error('Error showing rewarded ad:', error);
+      Alert.alert('Ad Error', 'Failed to load the ad. Please try again.', [{ text: 'OK' }]);
+    } finally {
+      setIsAdLoading(false);
+    }
+  };
 
   const initializeQuiz = async () => {
     try {
@@ -435,6 +473,31 @@ export default function BibleQuizScreen() {
             </Text>
           </View>
         </View>
+
+        {/* Reward Ad Button */}
+        {showRewardAdButton && (
+          <View style={styles.rewardAdContainer}>
+            <TouchableOpacity
+              style={styles.rewardAdButton}
+              onPress={handleWatchRewardAd}
+              disabled={isAdLoading}
+            >
+              <LinearGradient
+                colors={['#F59E0B', '#FBBF24']}
+                style={styles.rewardAdGradient}
+              >
+                {isAdLoading ? (
+                  <ActivityIndicator color="white" size="small" />
+                ) : (
+                  <View style={styles.rewardAdContent}>
+                    <Zap size={16} color="white" />
+                    <Text style={styles.rewardAdText}>Get +15s</Text>
+                  </View>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        )}
 
       {/* Progress Bar */}
       <View style={styles.progressContainer}>
@@ -874,5 +937,33 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     ...Shadows.sm,
+  },
+  // Reward Ad Styles
+  rewardAdContainer: {
+    alignItems: 'center',
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  rewardAdButton: {
+    borderRadius: BorderRadius.lg,
+    overflow: 'hidden',
+    ...Shadows.md,
+  },
+  rewardAdGradient: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rewardAdContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  rewardAdText: {
+    fontSize: Typography.sizes.base,
+    fontWeight: Typography.weights.bold,
+    color: Colors.neutral[50],
   },
 });

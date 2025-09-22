@@ -48,6 +48,8 @@ import BackgroundGradient from '@/components/BackgroundGradient';
 import { router } from 'expo-router';
 import { useMoodTracker } from '../../hooks/useMoodTracker';
 import { emitMoodEntrySaved } from '../../lib/eventEmitter';
+import BannerAd from '@/components/BannerAd';
+import { useInterstitialAds } from '@/hooks/useInterstitialAds';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -213,6 +215,7 @@ const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 export default function MoodTrackerScreen() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
   const { addMoodEntryToState } = useMoodTracker();
+  const { showInterstitialAd } = useInterstitialAds('mood');
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
   const [moodHistory, setMoodHistory] = useState<MoodEntry[]>([]);
@@ -299,11 +302,13 @@ export default function MoodTrackerScreen() {
       
       const mapped = querySnapshot.docs.map(doc => {
         const data = doc.data();
+        const moodId = data.mood_id || 'calm_003_content';
+        const moodData = getMoodData(moodId);
         return {
           id: doc.id,
-          mood_id: data.mood_id || 'calm_003_content',
-          mood_type: data.mood_type || 'Neutral',
-          emoji: data.emoji || '🙂',
+          mood_id: moodId,
+          mood_type: moodData.label.split(' ')[0],
+          emoji: moodData.icon,
           notes: data.note || '',
           created_at: data.created_at?.toDate() || new Date(),
           intensity_rating: data.intensity_rating || null,
@@ -720,6 +725,9 @@ export default function MoodTrackerScreen() {
           </TouchableOpacity>
         </View>
       </View>
+      
+      {/* Banner Ad below header */}
+      <BannerAd placement="mood" />
 
       <BackgroundGradient>
         <View style={styles.headerCardContainer}>

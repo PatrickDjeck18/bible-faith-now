@@ -25,6 +25,7 @@
       "firebaseMessagingSenderId": "354959331079",
       "firebaseAppId": "1:354959331079:android:7484ecb8076d9ee686ffa2",
       "firebaseDatabaseUrl": "https://daily-bread-88f42.firebaseio.com",
+      "googleClientId": "354959331079-faisqnjq2nd81nrhnikm2t0clfc49kle.apps.googleusercontent.com",
       "router": {},
       "eas": {
         "projectId": "bef64528-a022-46ea-8d92-de6ba1b001da"
@@ -38,6 +39,12 @@
         "@react-native-google-signin/google-signin",
         {
           "iosUrlScheme": "com.googleusercontent.apps.354959331079-faisqnjq2nd81nrhnikm2t0clfc49kle"
+        }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3940256099942544~3347511713"
         }
       ]
     ],

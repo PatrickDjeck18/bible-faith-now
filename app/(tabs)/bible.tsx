@@ -45,6 +45,9 @@ import { useDailyActivity } from '@/hooks/useDailyActivity';
 import { useFocusEffect } from 'expo-router';
 import { BibleReader } from '@/components/BibleReader';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { ModernHeader } from '@/components/ModernHeader';
+import BannerAd from '@/components/BannerAd';
+import { useInterstitialAds } from '@/hooks/useInterstitialAds';
 
 
 interface APIBook {
@@ -86,6 +89,7 @@ export default function BibleScreen() {
   } = useBibleAPI();
   const { todayActivity, updateBibleReading } = useDailyActivity();
   const tabBarHeight = useBottomTabBarHeight();
+  const { showInterstitialAd } = useInterstitialAds('bible');
 
   // Dimensions hook - moved inside component
   const [dimensions, setDimensions] = useState(Dimensions.get('window'));
@@ -526,42 +530,39 @@ export default function BibleScreen() {
   );
 
   // Render header
-  const renderHeader = () => (
-    <View style={styles.hero}>
-      <LinearGradient
-        colors={Colors.gradients.spiritualLight || ['#fdfcfb', '#e2d1c3', '#c9d6ff']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.heroGradient}
-      >
-        <View style={styles.heroContent}>
-                     {/* Back button for chapters and search views */}
-           {(viewMode === 'chapters' || viewMode === 'search') && (
-            <TouchableOpacity
-              style={styles.heroActionButton}
-              onPress={handleBack}
-            >
-              <ArrowLeft size={20} color={Colors.primary[600]} />
-            </TouchableOpacity>
-          )}
-          
-          <View style={styles.heroTextBlock}>
-                         <Text style={styles.heroTitle}>
-               {viewMode === 'books' ? 'Holy Bible' :
-                viewMode === 'chapters' ? selectedBook?.name :
-                viewMode === 'read' ? `${selectedBook?.name} ${selectedChapter}` :
-                viewMode === 'search' ? 'Search Results' : 'Holy Bible'}
-             </Text>
-             {viewMode === 'search' && (
-               <Text style={styles.heroSubtitle}>
-                 Find verses and passages
-               </Text>
-             )}
-          </View>
-        </View>
-      </LinearGradient>
-    </View>
-  );
+  const renderHeader = () => {
+    const getHeaderTitle = () => {
+      switch (viewMode) {
+        case 'books': return 'Holy Bible';
+        case 'chapters': return selectedBook?.name || 'Select Book';
+        case 'read': return `${selectedBook?.name || ''} ${selectedChapter}`;
+        case 'search': return 'Search Results';
+        default: return 'Holy Bible';
+      }
+    };
+
+    const getHeaderSubtitle = () => {
+      if (viewMode === 'search') return 'Find verses and passages';
+      return undefined;
+    };
+
+    return (
+      <View>
+        <ModernHeader
+          title={getHeaderTitle()}
+          subtitle={getHeaderSubtitle()}
+          showBackButton={viewMode === 'chapters' || viewMode === 'search'}
+          onBackPress={handleBack}
+          variant="default"
+          showSearchButton={viewMode === 'books'}
+          onSearchPress={() => setViewMode('search')}
+        />
+        
+        {/* Banner Ad below header */}
+        <BannerAd placement="bible" />
+      </View>
+    );
+  };
 
 
   // Render testament selector

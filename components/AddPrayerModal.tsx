@@ -62,15 +62,29 @@ const AddPrayerModal: React.FC<AddPrayerModalProps> = ({ isVisible, onClose, onA
     <Modal
       visible={isVisible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      transparent={true}
+      statusBarTranslucent={true}
       onRequestClose={onClose}
     >
-      <View style={styles.modalOverlay}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.modalContainer}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.modalOverlay}
+      >
+        <TouchableOpacity
+          style={styles.overlay}
+          activeOpacity={1}
+          onPress={onClose}
         >
-          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+          <TouchableOpacity
+            style={styles.modalContainer}
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <ScrollView
+              style={styles.modalContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
             {/* Header */}
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Add New Prayer</Text>
@@ -87,6 +101,8 @@ const AddPrayerModal: React.FC<AddPrayerModalProps> = ({ isVisible, onClose, onA
                 value={title}
                 onChangeText={setTitle}
                 placeholderTextColor={Colors.neutral[400]}
+                returnKeyType="next"
+                blurOnSubmit={false}
               />
               
               <TextInput
@@ -97,6 +113,8 @@ const AddPrayerModal: React.FC<AddPrayerModalProps> = ({ isVisible, onClose, onA
                 value={description}
                 onChangeText={setDescription}
                 placeholderTextColor={Colors.neutral[400]}
+                returnKeyType="done"
+                blurOnSubmit={true}
               />
               
               <Text style={styles.sectionTitle}>Category</Text>
@@ -138,9 +156,10 @@ const AddPrayerModal: React.FC<AddPrayerModalProps> = ({ isVisible, onClose, onA
                 <Text style={styles.submitButtonText}>Add Prayer</Text>
               </TouchableOpacity>
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </View>
+            </ScrollView>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
@@ -148,18 +167,22 @@ const AddPrayerModal: React.FC<AddPrayerModalProps> = ({ isVisible, onClose, onA
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
+    justifyContent: 'flex-end',
+  },
+  overlay: {
+    flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
   modalContainer: {
-    flex: 1,
     backgroundColor: Colors.white,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: '90%',
+    maxHeight: '85%',
+    marginTop: Platform.OS === 'ios' ? 40 : 0,
   },
   modalContent: {
-    flex: 1,
+    flexGrow: 1,
   },
   modalHeader: {
     flexDirection: 'row',

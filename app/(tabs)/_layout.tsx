@@ -30,7 +30,7 @@ export default function TabLayout() {
         },
         tabBarBackground: () => (
           <LinearGradient
-            colors={Colors.gradients.spiritualLight}
+            colors={Colors.gradients.main}
             style={{
               position: 'absolute',
               top: 0,
@@ -42,8 +42,8 @@ export default function TabLayout() {
             end={{ x: 1, y: 1 }}
           />
         ),
-        tabBarActiveTintColor: Colors.primary[600],
-        tabBarInactiveTintColor: Colors.neutral[500],
+        tabBarActiveTintColor: Colors.primary[500],
+        tabBarInactiveTintColor: Colors.neutral[400],
         tabBarIconStyle: {
           marginTop: 0,
         },

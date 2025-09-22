@@ -7,10 +7,10 @@ import {
   updateProfile,
   User,
 } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase'; // Ensure you import `db`
-import { doc, setDoc, getDoc } from 'firebase/firestore'; // Import Firestore functions
-import { Alert } from 'react-native';
+import { auth, db } from '@/lib/firebase';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { GoogleAuthService } from '@/lib/googleAuth';
+import { getAuthErrorMessage, AuthError } from '@/lib/authErrors';
 
 // Use the standard Firebase User type and add any custom properties as needed.
 export type AppUser = User & {
@@ -74,26 +74,27 @@ export function useAuth() {
 
   const signInWithEmail = async (email: string, password: string) => {
     try {
+      console.log('🔴 Attempting to sign in with email:', email);
+
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      console.log('🔴 Firebase sign in successful');
-      
-      // Call the function to create a document for a new user
+      console.log('🔴 Firebase sign in successful for user:', userCredential.user.uid);
+
+      // Create or update user document
       await createOrUpdateUserDocument(userCredential.user);
 
       const appUser: AppUser = {
         ...userCredential.user,
         uid: userCredential.user.uid,
       };
-      
+
       return { data: { user: appUser }, error: null };
     } catch (error: any) {
       console.error('🔴 Error during sign in:', error);
+      const authError = getAuthErrorMessage(error);
+
       return {
         data: null,
-        error: {
-          message: error.message || 'An unknown error occurred.',
-          code: error.code,
-        },
+        error: authError,
       };
     }
   };
@@ -107,24 +108,23 @@ export function useAuth() {
           displayName: fullName,
         });
       }
-      
-      // Call the function to create a document for the new user
+
+      // Create user document
       await createOrUpdateUserDocument(userCredential.user);
-      
+
       const appUser: AppUser = {
         ...userCredential.user,
         uid: userCredential.user.uid,
       };
-      
+
       return { data: { user: appUser }, error: null };
     } catch (error: any) {
       console.error('🔴 Error during sign up:', error);
+      const authError = getAuthErrorMessage(error);
+
       return {
         data: null,
-        error: {
-          message: error.message || 'An unknown error occurred.',
-          code: error.code,
-        },
+        error: authError,
       };
     }
   };
@@ -136,15 +136,13 @@ export function useAuth() {
       return { error: null };
     } catch (error: any) {
       console.error('🔴 Error during sign out:', error);
-      
+      const authError = getAuthErrorMessage(error);
+
       // Even if Firebase sign out fails, clear the local user state
       setUser(null);
-      
+
       return {
-        error: {
-          message: error.message || 'Failed to sign out.',
-          code: error.code,
-        },
+        error: authError,
       };
     }
   };
@@ -152,9 +150,9 @@ export function useAuth() {
   const signInWithGoogle = async () => {
     try {
       console.log('🔴 Starting Google Sign-In...');
-      
+
       const result = await GoogleAuthService.signInWithGoogleFirebase();
-      
+
       if (result.error) {
         console.error('🔴 Google Sign-In error:', result.error);
         return { data: null, error: result.error };
@@ -162,10 +160,10 @@ export function useAuth() {
 
       if (result.user) {
         console.log('🔴 Google Sign-In completed successfully in useAuth');
-        
-        // Call the function to create a document for the new user
+
+        // Create or update user document
         await createOrUpdateUserDocument(result.user);
-        
+
         const appUser: AppUser = {
           ...result.user,
           uid: result.user.uid,
@@ -184,23 +182,11 @@ export function useAuth() {
       };
     } catch (error: any) {
       console.error('🔴 Error during Google sign in:', error);
-      
-      if (error.code === 'oauth-config-error' || error.message?.includes('OAuth configuration')) {
-        return {
-          data: null,
-          error: {
-            message: 'Google OAuth configuration error. Please check your redirect URIs in Google Cloud Console.',
-            code: 'oauth-config-error',
-          },
-        };
-      }
-      
+      const authError = getAuthErrorMessage(error);
+
       return {
         data: null,
-        error: {
-          message: error.message || 'An unknown error occurred.',
-          code: error.code,
-        },
+        error: authError,
       };
     }
   };

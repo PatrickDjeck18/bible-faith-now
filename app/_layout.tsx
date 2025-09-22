@@ -3,8 +3,26 @@ import 'react-native-get-random-values';
 
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
+import { initializeAdMob } from '../lib/adMobService';
+import { revenueCatService } from '../lib/revenueCatService';
 
 export default function RootLayout() {
+  useEffect(() => {
+    // Initialize AdMob and RevenueCat services
+    const initializeServices = async () => {
+      try {
+        await initializeAdMob();
+        await revenueCatService.initialize();
+        console.log('AdMob and RevenueCat services initialized successfully');
+      } catch (error) {
+        console.error('Failed to initialize ad services:', error);
+      }
+    };
+
+    initializeServices();
+  }, []);
+
   return (
     <>
       <Stack screenOptions={{ headerShown: false }}>

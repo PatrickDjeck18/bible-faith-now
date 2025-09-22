@@ -4,34 +4,34 @@
  */
 
 export const Colors = {
-  // Primary Brand Colors - Minimalist Gray with Accent
+  // Primary Brand Colors - Vibrant Pink/Purple Theme
   primary: {
-    50: '#F9F9F9',
-    100: '#F2F2F2',
-    200: '#E5E5E5',
-    300: '#D8D8D8',
-    400: '#CBCBCB',
-    500: '#AFAFAF', // Primary
-    600: '#939393',
-    700: '#767676',
-    800: '#5A5A5A',
-    900: '#3D3D3D',
-    950: '#212121',
+    50: '#FDF2F8',
+    100: '#FCE7F3',
+    200: '#FBCFE8',
+    300: '#F9A8D4',
+    400: '#F472B6',
+    500: '#EC4899', // Primary - Vibrant Pink
+    600: '#DB2777',
+    700: '#BE185D',
+    800: '#9D174D',
+    900: '#831843',
+    950: '#500724',
   },
 
-  // Secondary Colors - Accent Color (Light Blue)
+  // Secondary Colors - Purple Accent
   secondary: {
-    50: '#E1F5FE',
-    100: '#B3E5FC',
-    200: '#81D4FA',
-    300: '#4FC3F7',
-    400: '#29B6F6',
-    500: '#03A9F4', // Secondary
-    600: '#039BE5',
-    700: '#0288D1',
-    800: '#0277BD',
-    900: '#01579B',
-    950: '#01427A',
+    50: '#F5F3FF',
+    100: '#EDE9FE',
+    200: '#DDD6FE',
+    300: '#C4B5FD',
+    400: '#A78BFA',
+    500: '#8B5CF6', // Secondary - Purple
+    600: '#7C3AED',
+    700: '#6D28D9',
+    800: '#5B21B6',
+    900: '#4C1D95',
+    950: '#2E1065',
   },
 
   // Neutral Colors - Warm Grays
@@ -93,52 +93,51 @@ export const Colors = {
   white: '#FFFFFF',
   black: '#000000',
 
-  // Modern Gradients
+  // Colorful Card Colors - Matching screenshot vibrant design
+  cardColors: {
+    orange: '#FF9500',
+    yellow: '#FFCC00',
+    green: '#34C759',
+    blue: '#007AFF',
+    purple: '#AF52DE',
+    pink: '#FF2D70',
+    red: '#FF3B30',
+    teal: '#5AC8FA',
+  },
+
+  // Modern Vibrant Gradients - Matching screenshot colorful design
   gradients: {
-    primary: ['#AFAFAF', '#939393', '#767676'] as const,
-    secondary: ['#03A9F4', '#039BE5', '#0288D1'] as const,
-    warm: ['#F59E0B', '#EF4444', '#EC4899'] as const,
-    sunset: ['#F97316', '#EF4444', '#EC4899'] as const,
-    ocean: ['#0EA5E9', '#06B6D4', '#14B8A6'] as const,
-    purple: ['#A855F7', '#8B5CF6', '#7C3AED'] as const,
-    spiritual: ['#8B5CF6', '#EC4899', '#F97316'] as const,
-    // New beautiful gradient options
-    aurora: ['#667eea', '#764ba2', '#f093fb'] as const,
-    cosmic: ['#4c1d95', '#7c3aed', '#a855f7'] as const,
-    nature: ['#10b981', '#34d399', '#6ee7b7'] as const,
-    fire: ['#dc2626', '#ea580c', '#f59e0b'] as const,
-    ice: ['#0284c7', '#0ea5e9', '#38bdf8'] as const,
-    dawn: ['#fbbf24', '#f59e0b', '#ea580c'] as const,
-    forest: ['#059669', '#0d9488', '#14b8a6'] as const,
-    royal: ['#1e1b4b', '#4338ca', '#6366f1'] as const,
-    // Beautiful soft gradient inspired by the screenshot
-    soft: ['#E3F2FD', '#F3E5F5', '#FCE4EC'] as const,
-    softGlow: ['#BBDEFB', '#E1BEE7', '#F8BBD9'] as const,
-    // Ultra soft minimal gradient with light grey background
-    minimal: ['#F8F9FA', '#F5F6F7', '#F2F3F4'] as const,
+    primary: ['#EC4899', '#DB2777', '#BE185D'] as const,
+    secondary: ['#8B5CF6', '#7C3AED', '#6D28D9'] as const,
+    warm: ['#FF9500', '#FFCC00', '#FF3B30'] as const,
+    sunset: ['#FF2D70', '#EC4899', '#FF9500'] as const,
+    ocean: ['#007AFF', '#5AC8FA', '#34C759'] as const,
+    purple: ['#8B5CF6', '#A78BFA', '#C4B5FD'] as const,
+    spiritual: ['#EC4899', '#8B5CF6', '#FF9500'] as const,
+    // New colorful gradients inspired by screenshot
+    colorful: ['#FF6B6B', '#4ECDC4', '#45B7D1'] as const,
+    vibrant: ['#FF9500', '#FF2D70', '#8B5CF6'] as const,
+    nature: ['#34C759', '#5AC8FA', '#007AFF'] as const,
+    fire: ['#FF3B30', '#FF9500', '#FFCC00'] as const,
+    ice: ['#5AC8FA', '#007AFF', '#5856D6'] as const,
+    dawn: ['#FFCC00', '#FF9500', '#FF3B30'] as const,
+    forest: ['#34C759', '#30D158', '#32D74B'] as const,
+    royal: ['#8B5CF6', '#7C3AED', '#6D28D9'] as const,
+    // Main background gradient matching screenshot
+    main: ['#F8E1F4', '#E8D5F2', '#D8C9F0'] as const,
+    softGlow: ['#F0D9FF', '#E8D5F2', '#D8C9F0'] as const,
+    // Keep spiritualLight for backward compatibility
+    spiritualLight: ['#F8E1F4', '#E8D5F2', '#D8C9F0'] as const,
+    divineMorning: ['#F0F2F5', '#E0E5EA', '#D0D8E0'] as const,
     lightGrey: ['#F9FAFB', '#F7F8F9', '#F5F6F7'] as const,
-    // PREMIUM BACKGROUND GRADIENTS - Stunning & Modern
-    
-    // Divine Morning - Heavenly blue to golden warmth
-    divineMorning: ['#667eea', '#764ba2', '#f093fb'] as const,
-    
-    // Ethereal Sunset - Mystical purple to warm coral
-    etherealSunset: ['#a8edea', '#fed6e3', '#ff9a9e'] as const,
-    
-    // Celestial Dream - Deep space to light dawn
-    celestialDream: ['#141e30', '#243b55', '#667eea'] as const,
-    
-    // Sacred Garden - Fresh mint to deep emerald
-    sacredGarden: ['#11998e', '#38ef7d', '#a8edea'] as const,
-    
-    // Spiritual Light - Pure white to gentle lavender (current choice)
-    spiritualLight: ['#fdfcfb', '#e2d1c3', '#c9d6ff'] as const,
-    
-    // Golden Hour - Warm amber to soft peach
-    goldenHour: ['#ff9a9e', '#fecfef', '#fecfef'] as const,
-    
-    // Ocean Breeze - Turquoise to sky blue
-    oceanBreeze: ['#667eea', '#764ba2', '#667eea'] as const,
+    // Card gradients for different features
+    card: {
+      orange: ['#FF9500', '#FF8C00'] as const,
+      green: ['#34C759', '#30D158'] as const,
+      blue: ['#007AFF', '#005ADB'] as const,
+      purple: ['#8B5CF6', '#7C3AED'] as const,
+      pink: ['#FF2D70', '#FF1B5E'] as const,
+    },
     
     // ACCENT GRADIENTS - For buttons and highlights
     accent: {
@@ -151,25 +150,32 @@ export const Colors = {
     },
   },
 
-  // PREMIUM GLASS & CARD EFFECTS
+  // COLORFUL GLASS & CARD EFFECTS - Matching screenshot vibrant design
   glass: {
-    light: 'rgba(255, 255, 255, 0.1)',
-    medium: 'rgba(255, 255, 255, 0.15)',
-    heavy: 'rgba(255, 255, 255, 0.25)',
+    light: 'rgba(255, 255, 255, 0.15)',
+    medium: 'rgba(255, 255, 255, 0.25)',
+    heavy: 'rgba(255, 255, 255, 0.35)',
     dark: 'rgba(0, 0, 0, 0.1)',
-    
-    // Premium frosted glass effects
-    frost: 'rgba(255, 255, 255, 0.3)',
-    crystal: 'rgba(255, 255, 255, 0.2)',
-    
-    // Enhanced card backgrounds
-    card: 'rgba(255, 255, 255, 0.85)',
+
+    // Colorful frosted glass effects
+    frost: 'rgba(255, 255, 255, 0.4)',
+    crystal: 'rgba(255, 255, 255, 0.3)',
+
+    // Enhanced colorful card backgrounds
+    card: 'rgba(255, 255, 255, 0.9)',
     cardDark: 'rgba(255, 255, 255, 0.95)',
-    cardSoft: 'rgba(255, 255, 255, 0.7)',
-    
-    // Overlay effects
-    overlay: 'rgba(0, 0, 0, 0.3)',
-    overlayLight: 'rgba(0, 0, 0, 0.1)',
+    cardSoft: 'rgba(255, 255, 255, 0.8)',
+
+    // Colorful overlay effects
+    overlay: 'rgba(0, 0, 0, 0.2)',
+    overlayLight: 'rgba(0, 0, 0, 0.05)',
+
+    // Colorful card variants
+    orange: 'rgba(255, 149, 0, 0.9)',
+    green: 'rgba(52, 199, 89, 0.9)',
+    blue: 'rgba(0, 122, 255, 0.9)',
+    purple: 'rgba(139, 92, 246, 0.9)',
+    pink: 'rgba(255, 45, 112, 0.9)',
   },
 };
 
@@ -188,21 +194,21 @@ export const Typography = {
     black: '900' as const,
   },
 
-  // Font Sizes - iOS Dynamic Type Inspired
+  // Font Sizes - Modern Mobile Design
   sizes: {
-    xs: 10,
-    sm: 12,
-    base: 14,
-    lg: 16,
-    xl: 18,
-    '2xl': 20,
-    '3xl': 24,
-    '4xl': 28,
-    '5xl': 32,
-    '6xl': 36,
-    '7xl': 42,
-    '8xl': 48,
-    '9xl': 56,
+    xs: 11,
+    sm: 13,
+    base: 15,
+    lg: 17,
+    xl: 19,
+    '2xl': 22,
+    '3xl': 26,
+    '4xl': 30,
+    '5xl': 36,
+    '6xl': 42,
+    '7xl': 48,
+    '8xl': 54,
+    '9xl': 62,
   },
 
   // Line Heights
@@ -225,31 +231,31 @@ export const Typography = {
 };
 
 export const Spacing = {
-  // 4px base unit system
-  xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 20,
-  '2xl': 24,
-  '3xl': 32,
-  '4xl': 40,
-  '5xl': 48,
-  '6xl': 64,
-  '7xl': 80,
-  '8xl': 96,
-  '9xl': 128,
+  // Modern 4px base unit system with generous spacing
+  xs: 6,
+  sm: 10,
+  md: 14,
+  lg: 18,
+  xl: 24,
+  '2xl': 32,
+  '3xl': 40,
+  '4xl': 48,
+  '5xl': 64,
+  '6xl': 80,
+  '7xl': 96,
+  '8xl': 120,
+  '9xl': 160,
 };
 
 export const BorderRadius = {
   none: 0,
-  sm: 4,
-  md: 8,
-  lg: 12,
-  xl: 16,
-  '2xl': 20,
-  '3xl': 24,
-  '4xl': 32,
+  sm: 6,
+  md: 10,
+  lg: 14,
+  xl: 18,
+  '2xl': 24,
+  '3xl': 32,
+  '4xl': 40,
   full: 9999,
 };
 

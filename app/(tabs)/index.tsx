@@ -12,11 +12,14 @@ import {
   ActivityIndicator,
   StatusBar,
 } from 'react-native';
-import { collection, doc, getDoc, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, where, limit } from 'firebase/firestore';
 
 import { router, useFocusEffect } from 'expo-router';
 import { Colors, Shadows, BorderRadius, Spacing, Typography } from '@/constants/DesignTokens';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { ModernHeader } from '@/components/ModernHeader';
+import BannerAd from '@/components/BannerAd';
+import SubscriptionCard from '@/components/SubscriptionCard';
 import {
   BookOpen,
   ArrowRight,
@@ -32,6 +35,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import BackgroundGradient from '@/components/BackgroundGradient';
 import { db, auth } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth'; // Import the useAuth hook
+import { useInterstitialAds } from '@/hooks/useInterstitialAds';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -66,7 +70,13 @@ const getMoodData = (moodId: string) => {
 };
 
 const getActionGradient = (baseColor: string) => {
-  return Colors.gradients.spiritualLight;
+  // Return colorful gradients based on the base color
+  if (baseColor.includes('#3B82F6')) return Colors.gradients.card.blue;
+  if (baseColor.includes('#10B981')) return Colors.gradients.card.green;
+  if (baseColor.includes('#8B5CF6')) return Colors.gradients.card.purple;
+  if (baseColor.includes('#EF4444')) return Colors.gradients.card.pink;
+  if (baseColor.includes('#F59E0B')) return Colors.gradients.card.orange;
+  return Colors.gradients.main;
 };
 
 // Interface definitions (ensure these are correct)
@@ -82,19 +92,13 @@ interface MoodEntry {
   created_at: { toDate: () => Date };
 }
 
-interface RecentActivity {
-  id: string;
-  icon: string;
-  title: string;
-  description?: string;
-  timestamp: { toDate: () => Date };
-  route: string;
-}
+
 
 export default function HomeScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const { fetchVerseOfTheDay } = useBibleAPI();
   const { user, loading: authLoading } = useAuth(); // Use the new useAuth hook
+  const { showInterstitialAd } = useInterstitialAds('home');
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [moodStats, setMoodStats] = useState({
@@ -102,7 +106,7 @@ export default function HomeScreen() {
     weeklyData: [],
   });
   const [activePrayers, setActivePrayers] = useState<any[]>([]);
-  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
+  
   const [loading, setLoading] = useState(true); // State for all data fetching on this screen
   const [verseLoading, setVerseLoading] = useState(true);
   const [dailyVerse, setDailyVerse] = useState<{ reference: string, text: string } | null>(null);
@@ -156,21 +160,7 @@ export default function HomeScreen() {
         setMoodStats(prev => ({ ...prev, todaysMood: null }));
       }
       
-      // Fetch recent activities
-      const recentActivitiesCollectionRef = collection(db, 'recentActivities');
-      const activitiesQuery = query(
-        recentActivitiesCollectionRef,
-        where('user_id', '==', user.uid),
-        orderBy('timestamp', 'desc'),
-        limit(10)
-      );
-      const activitiesSnapshot = await getDocs(activitiesQuery);
       
-      const activities = activitiesSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as RecentActivity[];
-      setRecentActivities(activities);
 
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -273,20 +263,7 @@ export default function HomeScreen() {
     );
   };
 
-  const formatTimeAgo = (timestamp: { toDate: () => Date }) => {
-    const seconds = Math.floor((new Date().getTime() - timestamp.toDate().getTime()) / 1000);
-    let interval = seconds / 31536000;
-    if (interval > 1) return `${Math.floor(interval)} years ago`;
-    interval = seconds / 2592000;
-    if (interval > 1) return `${Math.floor(interval)} months ago`;
-    interval = seconds / 86400;
-    if (interval > 1) return `${Math.floor(interval)} days ago`;
-    interval = seconds / 3600;
-    if (interval > 1) return `${Math.floor(interval)} hours ago`;
-    interval = seconds / 60;
-    if (interval > 1) return `${Math.floor(interval)} minutes ago`;
-    return `${Math.floor(seconds)} seconds ago`;
-  };
+  
   
   const journeyDays = user ? calculateJourneyDays() : 1;
 
@@ -343,18 +320,29 @@ export default function HomeScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarHeight + Spacing['4xl'] }]}
         >
-          <Animated.View style={[styles.header, { transform: [{ translateY: slideAnim }] }]}>
-            <View>
-              <Text style={styles.headerTitle}>{getGreeting()}</Text>
-              <Text style={styles.headerSubtitle}>
-                {user ? (profile?.full_name || user.email?.split('@')[0] || 'User') : 'Welcome, Guest'} • Day {journeyDays}
-              </Text>
-            </View>
+          <Animated.View style={[{ transform: [{ translateY: slideAnim }] }]}>
+            <ModernHeader
+              title={getGreeting()}
+              subtitle={`${user ? (profile?.full_name || user.email?.split('@')[0] || 'User') : 'Welcome, Guest'} • Day ${journeyDays}`}
+              variant="simple"
+              showNotificationButton={true}
+              showProfileButton={true}
+              onNotificationPress={() => {
+                // Handle notification press
+                console.log('Notifications pressed');
+              }}
+              onProfilePress={() => {
+                router.push('/(tabs)/profile');
+              }}
+            />
+            
+            {/* Banner Ad below header */}
+            <BannerAd placement="home" />
           </Animated.View>
 
           <Animated.View style={[{ transform: [{ translateY: slideAnim }] }]}>
             <LinearGradient
-              colors={Colors.gradients.spiritualLight}
+              colors={Colors.gradients.main}
               style={styles.verseCard}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
@@ -440,68 +428,13 @@ export default function HomeScreen() {
             ))}
           </View>
 
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Activity</Text>
-          </View>
+          {/* Subscription Card */}
+          <SubscriptionCard onPurchaseSuccess={() => {
+            // Refresh the page to hide ads immediately
+            fetchAllData();
+          }} />
 
-          <View style={styles.activityList}>
-            {loading ? (
-              <View style={styles.activityLoading}>
-                <ActivityIndicator size="small" color={Colors.primary[500]} />
-                <Text style={styles.activityLoadingText}>Loading recent activities...</Text>
-              </View>
-            ) : recentActivities.length > 0 ? (
-              recentActivities.map((activity, index) => (
-                <Animated.View
-                  key={activity.id}
-                  style={[
-                    { 
-                      transform: [{ 
-                        translateY: slideAnim.interpolate({
-                          inputRange: [0, 30],
-                          outputRange: [0, 20 + (index * 8)],
-                        })
-                      }],
-                    }
-                  ]}
-                >
-                  <TouchableOpacity
-                    onPress={() => router.push(activity.route as any)}
-                    activeOpacity={0.8}
-                  >
-                    <LinearGradient
-                      colors={Colors.gradients.spiritualLight}
-                      style={styles.activityItem}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                    >
-                      <View style={[styles.activityIcon, { backgroundColor: Colors.primary[50] }]}>
-                        <Text style={[styles.activityIconText, { color: Colors.primary[600] }]}>{activity.icon}</Text>
-                      </View>
-                      <View style={styles.activityContent}>
-                        <Text style={[styles.activityTitle, { color: Colors.neutral[900] }]}>{activity.title}</Text>
-                        {activity.description && (
-                          <Text style={[styles.activityDescription, { color: Colors.neutral[600] }]}>{activity.description}</Text>
-                        )}
-                        <Text style={[styles.activityTime, { color: Colors.neutral[500] }]}>{formatTimeAgo(activity.timestamp)}</Text>
-                      </View>
-                      <View style={styles.activityArrow}>
-                        <ArrowRight size={16} color={Colors.primary[600]} />
-                      </View>
-                    </LinearGradient>
-                  </TouchableOpacity>
-                </Animated.View>
-              ))
-            ) : (
-              <View style={styles.emptyActivity}>
-                <View style={styles.emptyActivityIcon}>
-                  <Sparkles size={32} color={Colors.neutral[400]} />
-                </View>
-                <Text style={styles.emptyActivityText}>No recent activities</Text>
-                <Text style={styles.emptyActivitySubtext}>Start your spiritual journey today!</Text>
-              </View>
-            )}
-          </View>
+          
         </Animated.ScrollView>
       </BackgroundGradient>
     </View>
@@ -755,89 +688,7 @@ const styles = StyleSheet.create({
     color: Colors.neutral[600],
     textAlign: 'center',
   },
-  activityList: {
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    borderRadius: BorderRadius['2xl'],
-    padding: Spacing.lg,
-    ...Shadows.md,
-    borderWidth: 1,
-    borderColor: Colors.neutral[100],
-  },
-  activityItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.md,
-    marginBottom: Spacing.sm,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: BorderRadius.xl,
-    borderWidth: 1,
-    borderColor: Colors.neutral[100],
-    ...Shadows.sm,
-  },
-  activityIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: BorderRadius.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: Spacing.md,
-    ...Shadows.xs,
-  },
-  activityContent: {
-    flex: 1,
-  },
-  activityTitle: {
-    fontSize: Typography.sizes.base,
-    fontWeight: Typography.weights.semiBold,
-    color: Colors.neutral[900],
-    marginBottom: 4,
-  },
-  activityTime: {
-    fontSize: Typography.sizes.sm,
-    color: Colors.neutral[500],
-    fontWeight: Typography.weights.medium,
-  },
-  activityIconText: {
-    fontSize: 18,
-  },
-  activityDescription: {
-    fontSize: Typography.sizes.sm,
-    color: Colors.neutral[600],
-    marginBottom: 4,
-    fontWeight: Typography.weights.medium,
-  },
-  activityArrow: {
-    marginLeft: Spacing.sm,
-  },
-  activityLoading: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing['2xl'],
-  },
-  activityLoadingText: {
-    fontSize: Typography.sizes.base,
-    color: Colors.neutral[600],
-    marginLeft: Spacing.sm,
-  },
-  emptyActivity: {
-    alignItems: 'center',
-    paddingVertical: Spacing['2xl'],
-  },
-  emptyActivityIcon: {
-    marginBottom: Spacing.md,
-  },
-  emptyActivityText: {
-    fontSize: Typography.sizes.base,
-    fontWeight: Typography.weights.medium,
-    color: Colors.neutral[700],
-    marginBottom: Spacing.xs,
-  },
-  emptyActivitySubtext: {
-    fontSize: Typography.sizes.sm,
-    color: Colors.neutral[500],
-  },
+  
   bottomSpacing: {
     height: Spacing['4xl'],
   },

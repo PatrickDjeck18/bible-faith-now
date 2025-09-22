@@ -1,15 +1,16 @@
 import { Platform } from 'react-native';
 import { signInWithCredential, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from './firebase';
-import { 
-  configureGoogleSignin, 
-  signInWithGoogle, 
-  signOutGoogle, 
-  isSignedInGoogle, 
+import {
+  configureGoogleSignin,
+  signInWithGoogle,
+  signOutGoogle,
+  isSignedInGoogle,
   getCurrentUserGoogle,
   getGoogleSigninStatusCodes,
   isGoogleSigninAvailable
 } from './googleSigninWrapper';
+import { config } from './config';
 
 export class GoogleAuthAndroidService {
   static async initialize() {
@@ -21,12 +22,13 @@ export class GoogleAuthAndroidService {
 
       try {
         await configureGoogleSignin({
-          webClientId: '354959331079-faisqnjq2nd81nrhnikm2t0clfc49kle.apps.googleusercontent.com',
+          webClientId: config.google.webClientId,
           offlineAccess: true,
           hostedDomain: '',
           forceCodeForRefreshToken: true,
           accountName: '',
           iosClientId: '',
+          scopes: ['https://www.googleapis.com/auth/user.birthday.read'],
         });
         
         console.log('🔴 Google Sign-In configured successfully');

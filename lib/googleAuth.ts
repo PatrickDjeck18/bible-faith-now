@@ -6,6 +6,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { GoogleAuthWebService } from './googleAuthWeb';
 import { GoogleAuthAndroidService } from './googleAuthAndroidNew';
 import { ModuleUtils } from './moduleUtils';
+import { config } from './config';
 
 // Complete the auth session for web
 WebBrowser.maybeCompleteAuthSession();
@@ -72,19 +73,21 @@ export class GoogleAuthService {
       
       // Get the correct redirect URI based on platform
       const redirectUri = AuthSession.makeRedirectUri({
-        scheme: 'daily-bread',
+        scheme: config.app.scheme,
         path: 'auth',
       });
 
       console.log('🔴 Redirect URI:', redirectUri);
-      console.log('🔴 Client ID:', process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID);
+      console.log('🔴 Client ID:', config.google.clientId);
       
       // For development on physical devices, Expo uses a proxy
       // The redirect URI format is: exp://IP_ADDRESS:PORT/--/auth
       // This needs to be configured in Google Cloud Console
       
+      const clientId = config.google.clientId;
+
       const request = new AuthSession.AuthRequest({
-        clientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '354959331079-faisqnjq2nd81nrhnikm2t0clfc49kle.apps.googleusercontent.com',
+        clientId: clientId,
         scopes: ['openid', 'profile', 'email'],
         redirectUri: redirectUri,
         responseType: AuthSession.ResponseType.Code,
@@ -173,8 +176,8 @@ export class GoogleAuthService {
   private static async exchangeCodeForTokens(code: string, redirectUri: string) {
     try {
       const tokenEndpoint = 'https://oauth2.googleapis.com/token';
-      const clientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || '354959331079-faisqnjq2nd81nrhnikm2t0clfc49kle.apps.googleusercontent.com';
-      
+      const clientId = config.google.clientId;
+
       const response = await fetch(tokenEndpoint, {
         method: 'POST',
         headers: {
@@ -183,6 +186,7 @@ export class GoogleAuthService {
         body: new URLSearchParams({
           code: code,
           client_id: clientId,
+          client_secret: '', // Not needed for public OAuth clients
           redirect_uri: redirectUri,
           grant_type: 'authorization_code',
         }),

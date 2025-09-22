@@ -23,6 +23,8 @@ import {
 } from 'lucide-react-native';
 import { useQuizDatabase } from '@/hooks/useQuizDatabase';
 import BackgroundGradient from '@/components/BackgroundGradient';
+import BannerAd from '@/components/BannerAd';
+import { useInterstitialAds } from '@/hooks/useInterstitialAds';
 
 const { width } = Dimensions.get('window');
 
@@ -30,6 +32,7 @@ export default function QuizTabScreen() {
   const { stats, refreshStats } = useQuizDatabase();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
+  const { showInterstitialAd } = useInterstitialAds('quiz');
 
   useFocusEffect(
     useCallback(() => {
@@ -60,23 +63,28 @@ export default function QuizTabScreen() {
   };
 
   const renderHeader = () => (
-    <Animated.View
-      style={[
-        styles.header,
-        {
-          opacity: fadeAnim,
-          transform: [{ translateY: slideAnim }]
-        }
-      ]}
-    >
-      <View>
-        <Text style={styles.headerTitle}>Bible Quiz</Text>
-        <Text style={styles.headerSubtitle}>Test your knowledge</Text>
-      </View>
-      <View style={styles.headerIcon}>
-        <Brain size={32} color={Colors.primary[600]} />
-      </View>
-    </Animated.View>
+    <View>
+      <Animated.View
+        style={[
+          styles.header,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }]
+          }
+        ]}
+      >
+        <View>
+          <Text style={styles.headerTitle}>Bible Quiz</Text>
+          <Text style={styles.headerSubtitle}>Test your knowledge</Text>
+        </View>
+        <View style={styles.headerIcon}>
+          <Brain size={32} color={Colors.primary[600]} />
+        </View>
+      </Animated.View>
+      
+      {/* Banner Ad below header */}
+      <BannerAd placement="quiz" />
+    </View>
   );
 
   const renderStartQuizCard = () => (
