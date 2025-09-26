@@ -18,7 +18,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useContext } from 'react';
-import Purchases from 'react-native-purchases'; // Import Purchases for subscription logic
 
 import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, Send, Bot, Book, Heart, Cross, Users, Sparkles, CircleHelp as HelpCircle, MessageCircle, Star, Leaf, User, Info, Clock, ChevronRight, Play, Star as PremiumStar, Zap } from 'lucide-react-native';
@@ -74,7 +73,7 @@ const AccessModal = ({
       <View style={accessModalStyles.modalContainer}>
         {/* CORRECTED: The content is now wrapped inside the LinearGradient container */}
         <LinearGradient
-          colors={Colors.gradients.etherealSunset as any}
+          colors={Colors.gradients.spiritualLight as any}
           style={accessModalStyles.modalGradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
@@ -83,7 +82,7 @@ const AccessModal = ({
             <Zap size={36} color="white" style={{ marginBottom: 12 }} />
             <Text style={accessModalStyles.modalTitle}>Unlock AI Bible Chat</Text>
             <Text style={accessModalStyles.modalSubtitle}>
-              Watch a few short video ads or upgrade to an ad-free subscription for unlimited access.
+              Watch a few short video ads for unlimited access.
             </Text>
           </View>
           
@@ -118,7 +117,7 @@ const AccessModal = ({
           >
             <View style={accessModalStyles.buttonContent}>
               <PremiumStar size={20} color="#3B82F6" />
-              <Text style={accessModalStyles.upgradeButtonText}>Upgrade to Subscription</Text>
+              <Text style={accessModalStyles.upgradeButtonText}>Premium Unavailable</Text>
             </View>
           </TouchableOpacity>
         </LinearGradient>
@@ -341,25 +340,7 @@ export default function AIBibleChatScreen() {
   };
 
   const handleUpgradeSubscription = async () => {
-    try {
-      const offerings = await Purchases.getOfferings();
-      if (offerings.current) {
-        const packageToPurchase = offerings.current.monthly || offerings.current.weekly;
-        if (packageToPurchase) {
-          Alert.alert('Redirecting to Payment', 'Please complete your purchase to unlock the chat.', [{ text: 'OK' }]);
-          await Purchases.purchasePackage(packageToPurchase);
-        } else {
-          Alert.alert('Error', 'No subscription package found. Please try again later.');
-        }
-      } else {
-        Alert.alert('Error', 'Could not fetch subscription offerings.');
-      }
-    } catch (e: any) {
-      if (!e.userCancelled) {
-        Alert.alert('Purchase Failed', e.message || 'An error occurred during the purchase.');
-        console.error('❌ Purchase error:', e);
-      }
-    }
+    Alert.alert('Premium Unavailable', 'Premium subscriptions are not currently available. Please use the ad-based access for now.');
   };
   
   // Conditionally render the paywall or the main screen content
@@ -370,7 +351,7 @@ export default function AIBibleChatScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
       <LinearGradient
-        colors={Colors.gradients.etherealSunset as any}
+        colors={Colors.gradients.spiritualLight as any}
         style={styles.gradient}
       >
         <KeyboardAvoidingView 

@@ -243,8 +243,7 @@ export default function SettingsScreen() {
                 about Google's privacy practices at https://policies.google.com/privacy.
               </Text>
               <Text style={styles.privacyText}>
-                We also offer in-app subscriptions for premium features. Payment processing
-                is handled by your device's app store (Apple App Store or Google Play Store).
+                Premium features are currently available through ad-based access.
                 We do not store your payment information directly.
               </Text>
               <Text style={styles.privacyText}>
@@ -441,42 +440,7 @@ export default function SettingsScreen() {
             </View>
           </Animated.View>
 
-          {/* Premium Section */}
-          <Animated.View style={[styles.premiumSection, { transform: [{ scale: scaleAnim }] }]}>
-            <SimpleSettingItem
-              icon={<Crown size={20} color={isPremium ? "#10B981" : "#8B5CF6"} />}
-              title={isPremium ? "Premium Member" : "Go Premium"}
-              subtitle={isPremium ? "Ad-free experience active" : "Remove ads and unlock premium features"}
-              rightElement={
-                isPremium ? (
-                  <View style={styles.premiumBadge}>
-                    <Text style={styles.premiumBadgeText}>ACTIVE</Text>
-                  </View>
-                ) : (
-                  <TouchableOpacity
-                    style={styles.upgradeButton}
-                    onPress={() => {
-                      // Open PremiumPurchaseModal
-                      Alert.alert('Premium Upgrade', 'Premium purchase options will be available in the next update.');
-                    }}
-                  >
-                    <Text style={styles.upgradeButtonText}>Upgrade</Text>
-                  </TouchableOpacity>
-                )
-              }
-            />
-            
-            {/* Restore Purchases */}
-            {!isPremium && (
-              <TouchableOpacity
-                style={styles.restoreButton}
-                onPress={restorePurchases}
-                disabled={adsLoading}
-              >
-                <Text style={styles.restoreButtonText}>Restore Purchases</Text>
-              </TouchableOpacity>
-            )}
-          </Animated.View>
+          {/* Premium Section removed per request */}
 
           {/* Simple Settings */}
           <Animated.View style={[styles.settingsSection, { transform: [{ scale: scaleAnim }] }]}>
@@ -598,7 +562,7 @@ const styles = StyleSheet.create({
   
   // Header Styles
   header: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 40, // Account for status bar
+    paddingTop: Platform.OS === 'ios' ? 80 : 56, // push title further down on mobile
     paddingBottom: 24,
   },
   titleContainer: {

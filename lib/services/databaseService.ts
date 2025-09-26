@@ -1,5 +1,6 @@
-import { FirestoreService, COLLECTIONS } from '../firestore';
+import { COLLECTIONS } from '../firestore';
 import { auth } from '../firebase';
+import { SupabaseService } from './supabaseService';
 import type { 
   Profile, 
   DailyActivity, 
@@ -22,7 +23,7 @@ export class DatabaseService {
   static async getProfile(): Promise<Profile | null> {
     try {
       const userId = this.getCurrentUserId();
-      const profiles = await FirestoreService.getByUserId<Profile>(
+      const profiles = await SupabaseService.getByUserId<Profile>(
         COLLECTIONS.PROFILES,
         userId
       );
@@ -36,7 +37,7 @@ export class DatabaseService {
   static async createProfile(profileData: Omit<Profile, 'id' | 'created_at' | 'updated_at'>): Promise<string> {
     try {
       const userId = this.getCurrentUserId();
-      return await FirestoreService.create(COLLECTIONS.PROFILES, {
+      return await SupabaseService.create(COLLECTIONS.PROFILES, {
         ...profileData,
         user_id: userId
       });
@@ -48,7 +49,7 @@ export class DatabaseService {
 
   static async updateProfile(profileId: string, updates: Partial<Profile>): Promise<void> {
     try {
-      await FirestoreService.update(COLLECTIONS.PROFILES, profileId, updates);
+      await SupabaseService.update(COLLECTIONS.PROFILES, profileId, updates);
     } catch (error) {
       console.error('❌ Error updating profile:', error);
       throw error;
@@ -59,7 +60,7 @@ export class DatabaseService {
   static async getDailyActivities(): Promise<DailyActivity[]> {
     try {
       const userId = this.getCurrentUserId();
-      return await FirestoreService.getByUserId<DailyActivity>(
+      return await SupabaseService.getByUserId<DailyActivity>(
         COLLECTIONS.DAILY_ACTIVITIES,
         userId,
         'activity_date',
@@ -74,7 +75,7 @@ export class DatabaseService {
   static async getDailyActivityByDate(date: string): Promise<DailyActivity | null> {
     try {
       const userId = this.getCurrentUserId();
-      const activities = await FirestoreService.query<DailyActivity>(
+      const activities = await SupabaseService.query<DailyActivity>(
         COLLECTIONS.DAILY_ACTIVITIES,
         [
           { field: 'user_id', operator: '==', value: userId },
@@ -91,7 +92,7 @@ export class DatabaseService {
   static async createDailyActivity(activityData: Omit<DailyActivity, 'id' | 'created_at' | 'updated_at'>): Promise<string> {
     try {
       const userId = this.getCurrentUserId();
-      return await FirestoreService.create(COLLECTIONS.DAILY_ACTIVITIES, {
+      return await SupabaseService.create(COLLECTIONS.DAILY_ACTIVITIES, {
         ...activityData,
         user_id: userId
       });
@@ -103,7 +104,7 @@ export class DatabaseService {
 
   static async updateDailyActivity(activityId: string, updates: Partial<DailyActivity>): Promise<void> {
     try {
-      await FirestoreService.update(COLLECTIONS.DAILY_ACTIVITIES, activityId, updates);
+      await SupabaseService.update(COLLECTIONS.DAILY_ACTIVITIES, activityId, updates);
     } catch (error) {
       console.error('❌ Error updating daily activity:', error);
       throw error;
@@ -114,7 +115,7 @@ export class DatabaseService {
   static async getMoodEntries(): Promise<MoodEntry[]> {
     try {
       const userId = this.getCurrentUserId();
-      return await FirestoreService.getByUserId<MoodEntry>(
+      return await SupabaseService.getByUserId<MoodEntry>(
         COLLECTIONS.MOOD_ENTRIES,
         userId,
         'entry_date',
@@ -129,7 +130,7 @@ export class DatabaseService {
   static async getMoodEntryByDate(date: string): Promise<MoodEntry | null> {
     try {
       const userId = this.getCurrentUserId();
-      const entries = await FirestoreService.query<MoodEntry>(
+      const entries = await SupabaseService.query<MoodEntry>(
         COLLECTIONS.MOOD_ENTRIES,
         [
           { field: 'user_id', operator: '==', value: userId },
@@ -146,7 +147,7 @@ export class DatabaseService {
   static async createMoodEntry(entryData: Omit<MoodEntry, 'id' | 'created_at' | 'updated_at'>): Promise<string> {
     try {
       const userId = this.getCurrentUserId();
-      return await FirestoreService.create(COLLECTIONS.MOOD_ENTRIES, {
+      return await SupabaseService.create(COLLECTIONS.MOOD_ENTRIES, {
         ...entryData,
         user_id: userId
       });
@@ -158,7 +159,7 @@ export class DatabaseService {
 
   static async updateMoodEntry(entryId: string, updates: Partial<MoodEntry>): Promise<void> {
     try {
-      await FirestoreService.update(COLLECTIONS.MOOD_ENTRIES, entryId, updates);
+      await SupabaseService.update(COLLECTIONS.MOOD_ENTRIES, entryId, updates);
     } catch (error) {
       console.error('❌ Error updating mood entry:', error);
       throw error;
@@ -167,7 +168,7 @@ export class DatabaseService {
 
   static async deleteMoodEntry(entryId: string): Promise<void> {
     try {
-      await FirestoreService.delete(COLLECTIONS.MOOD_ENTRIES, entryId);
+      await SupabaseService.delete(COLLECTIONS.MOOD_ENTRIES, entryId);
     } catch (error) {
       console.error('❌ Error deleting mood entry:', error);
       throw error;
@@ -178,7 +179,7 @@ export class DatabaseService {
   static async getPrayers(): Promise<Prayer[]> {
     try {
       const userId = this.getCurrentUserId();
-      return await FirestoreService.getByUserId<Prayer>(
+      return await SupabaseService.getByUserId<Prayer>(
         COLLECTIONS.PRAYERS,
         userId,
         'created_at',
@@ -192,7 +193,7 @@ export class DatabaseService {
 
   static async getPrayerById(prayerId: string): Promise<Prayer | null> {
     try {
-      return await FirestoreService.getById<Prayer>(COLLECTIONS.PRAYERS, prayerId);
+      return await SupabaseService.getById<Prayer>(COLLECTIONS.PRAYERS, prayerId);
     } catch (error) {
       console.error('❌ Error getting prayer by ID:', error);
       return null;
@@ -202,7 +203,7 @@ export class DatabaseService {
   static async createPrayer(prayerData: Omit<Prayer, 'id' | 'created_at' | 'updated_at'>): Promise<string> {
     try {
       const userId = this.getCurrentUserId();
-      return await FirestoreService.create(COLLECTIONS.PRAYERS, {
+      return await SupabaseService.create(COLLECTIONS.PRAYERS, {
         ...prayerData,
         user_id: userId
       });
@@ -214,7 +215,7 @@ export class DatabaseService {
 
   static async updatePrayer(prayerId: string, updates: Partial<Prayer>): Promise<void> {
     try {
-      await FirestoreService.update(COLLECTIONS.PRAYERS, prayerId, updates);
+      await SupabaseService.update(COLLECTIONS.PRAYERS, prayerId, updates);
     } catch (error) {
       console.error('❌ Error updating prayer:', error);
       throw error;
@@ -223,7 +224,7 @@ export class DatabaseService {
 
   static async deletePrayer(prayerId: string): Promise<void> {
     try {
-      await FirestoreService.delete(COLLECTIONS.PRAYERS, prayerId);
+      await SupabaseService.delete(COLLECTIONS.PRAYERS, prayerId);
     } catch (error) {
       console.error('❌ Error deleting prayer:', error);
       throw error;
@@ -234,7 +235,7 @@ export class DatabaseService {
   static async getQuizSessions(): Promise<QuizSession[]> {
     try {
       const userId = this.getCurrentUserId();
-      return await FirestoreService.getByUserId<QuizSession>(
+      return await SupabaseService.getByUserId<QuizSession>(
         COLLECTIONS.QUIZ_SESSIONS,
         userId,
         'created_at',
@@ -249,7 +250,7 @@ export class DatabaseService {
   static async createQuizSession(sessionData: Omit<QuizSession, 'id' | 'created_at' | 'updated_at'>): Promise<string> {
     try {
       const userId = this.getCurrentUserId();
-      return await FirestoreService.create(COLLECTIONS.QUIZ_SESSIONS, {
+      return await SupabaseService.create(COLLECTIONS.QUIZ_SESSIONS, {
         ...sessionData,
         user_id: userId
       });
@@ -262,7 +263,7 @@ export class DatabaseService {
   static async getUserQuizStats(): Promise<UserQuizStats | null> {
     try {
       const userId = this.getCurrentUserId();
-      const stats = await FirestoreService.getByUserId<UserQuizStats>(
+      const stats = await SupabaseService.getByUserId<UserQuizStats>(
         COLLECTIONS.USER_QUIZ_STATS,
         userId
       );
@@ -276,7 +277,7 @@ export class DatabaseService {
   static async createUserQuizStats(statsData: Omit<UserQuizStats, 'id' | 'created_at' | 'updated_at'>): Promise<string> {
     try {
       const userId = this.getCurrentUserId();
-      return await FirestoreService.create(COLLECTIONS.USER_QUIZ_STATS, {
+      return await SupabaseService.create(COLLECTIONS.USER_QUIZ_STATS, {
         ...statsData,
         user_id: userId
       });
@@ -288,7 +289,7 @@ export class DatabaseService {
 
   static async updateUserQuizStats(statsId: string, updates: Partial<UserQuizStats>): Promise<void> {
     try {
-      await FirestoreService.update(COLLECTIONS.USER_QUIZ_STATS, statsId, updates);
+      await SupabaseService.update(COLLECTIONS.USER_QUIZ_STATS, statsId, updates);
     } catch (error) {
       console.error('❌ Error updating user quiz stats:', error);
       throw error;

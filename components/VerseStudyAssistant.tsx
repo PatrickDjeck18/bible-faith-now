@@ -92,75 +92,77 @@ export const VerseStudyAssistant: React.FC<VerseStudyAssistantProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <Sparkles size={24} color={Colors.primary[600]} />
-          <Text style={styles.headerTitle}>Verse Study Assistant</Text>
-        </View>
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <X size={24} color={Colors.neutral[600]} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Verse Reference */}
-      <View style={styles.verseReference}>
-        <Text style={styles.verseReferenceText}>
-          {verseData.bookName} {verseData.chapterNumber}:{verseData.verseNumber}
-        </Text>
-        <Text style={styles.verseText}>"{verseData.verseText}"</Text>
-      </View>
-
-      {/* Content */}
-      <ScrollView style={styles.content}>
-        {studyContent.loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={Colors.primary[600]} />
+      <View style={styles.modalCard}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerContent}>
+            <Sparkles size={24} color={Colors.primary[600]} />
+            <Text style={styles.headerTitle}>Verse Study Assistant</Text>
           </View>
-        ) : (
-          <>
-            {/* Explanation */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <BookOpen size={20} color={Colors.primary[600]} />
-                <Text style={styles.sectionTitle}>Explanation</Text>
-              </View>
-              <Text style={styles.sectionContent}>{studyContent.explanation}</Text>
-            </View>
+          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+            <X size={24} color={Colors.neutral[600]} />
+          </TouchableOpacity>
+        </View>
 
-            {/* Historical Context */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Clock size={20} color={Colors.primary[600]} />
-                <Text style={styles.sectionTitle}>Historical Context</Text>
-              </View>
-              <Text style={styles.sectionContent}>{studyContent.historicalContext}</Text>
-            </View>
+        {/* Verse Reference */}
+        <View style={styles.verseReference}>
+          <Text style={styles.verseReferenceText}>
+            {verseData.bookName} {verseData.chapterNumber}:{verseData.verseNumber}
+          </Text>
+          <Text style={styles.verseText}>"{verseData.verseText}"</Text>
+        </View>
 
-            {/* Theological Interpretation */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Sparkles size={20} color={Colors.primary[600]} />
-                <Text style={styles.sectionTitle}>Theological Interpretation</Text>
-              </View>
-              <Text style={styles.sectionContent}>{studyContent.theologicalInterpretation}</Text>
+        {/* Content */}
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={true}>
+          {studyContent.loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={Colors.primary[600]} />
             </View>
+          ) : (
+            <>
+              {/* Explanation */}
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <BookOpen size={20} color={Colors.primary[600]} />
+                  <Text style={styles.sectionTitle}>Explanation</Text>
+                </View>
+                <Text style={styles.sectionContent}>{studyContent.explanation}</Text>
+              </View>
 
-            {/* Related Scriptures */}
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Link size={20} color={Colors.primary[600]} />
-                <Text style={styles.sectionTitle}>Related Scriptures</Text>
+              {/* Historical Context */}
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Clock size={20} color={Colors.primary[600]} />
+                  <Text style={styles.sectionTitle}>Historical Context</Text>
+                </View>
+                <Text style={styles.sectionContent}>{studyContent.historicalContext}</Text>
               </View>
-              {studyContent.relatedScriptures.map((scripture, index) => (
-                <Text key={index} style={styles.relatedScripture}>
-                  • {scripture}
-                </Text>
-              ))}
-            </View>
-          </>
-        )}
-      </ScrollView>
+
+              {/* Theological Interpretation */}
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Sparkles size={20} color={Colors.primary[600]} />
+                  <Text style={styles.sectionTitle}>Theological Interpretation</Text>
+                </View>
+                <Text style={styles.sectionContent}>{studyContent.theologicalInterpretation}</Text>
+              </View>
+
+              {/* Related Scriptures */}
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Link size={20} color={Colors.primary[600]} />
+                  <Text style={styles.sectionTitle}>Related Scriptures</Text>
+                </View>
+                {studyContent.relatedScriptures.map((scripture, index) => (
+                  <Text key={index} style={styles.relatedScripture}>
+                    • {scripture}
+                  </Text>
+                ))}
+              </View>
+            </>
+          )}
+        </ScrollView>
+      </View>
     </View>
   );
 };
@@ -172,8 +174,19 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: Colors.neutral[50],
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
     zIndex: 1000,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.md,
+  },
+  modalCard: {
+    width: '94%',
+    maxWidth: 600,
+    maxHeight: '90%',
+    backgroundColor: Colors.neutral[50],
+    borderRadius: BorderRadius['2xl'],
+    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',

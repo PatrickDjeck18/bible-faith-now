@@ -1,4 +1,6 @@
 
+import { config } from '../config';
+
 export interface VerseStudyRequest {
   bookName: string;
   chapterNumber: number;
@@ -17,13 +19,11 @@ export interface VerseStudyResponse {
 }
 
 export class VerseStudyService {
-  private static readonly DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions';
-  private static readonly API_KEY = process.env.EXPO_PUBLIC_DEEPSEEK_API_KEY;
   private static readonly API_TIMEOUT = 15000; // 15 second timeout
 
   static async analyzeVerse(request: VerseStudyRequest): Promise<VerseStudyResponse> {
     // If no API key, return fallback content
-    if (!this.API_KEY) {
+    if (!config.deepseek.apiKey) {
       console.log('⚠️ No DeepSeek API key found, using fallback verse study content');
       return this.createFallbackStudyContent(request);
     }
@@ -36,10 +36,10 @@ export class VerseStudyService {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.API_TIMEOUT);
 
-      const response = await fetch(this.DEEPSEEK_API_URL, {
+      const response = await fetch(config.deepseek.apiUrl, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.API_KEY}`,
+          'Authorization': `Bearer ${config.deepseek.apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -156,16 +156,16 @@ Make the analysis specific, accurate, and spiritually enriching.`;
 
   // Test API connection
   static async testConnection(): Promise<boolean> {
-    if (!this.API_KEY) {
+    if (!config.deepseek.apiKey) {
       console.log('❌ No DeepSeek API key found');
       return false;
     }
 
     try {
-      const response = await fetch(this.DEEPSEEK_API_URL, {
+      const response = await fetch(config.deepseek.apiUrl, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${this.API_KEY}`,
+          'Authorization': `Bearer ${config.deepseek.apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({

@@ -70,6 +70,7 @@ import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { ModernHeader } from '@/components/ModernHeader';
 import BannerAd from '@/components/BannerAd';
 import { useInterstitialAds } from '@/hooks/useInterstitialAds';
+import AuthGuard from '@/components/auth/AuthGuard';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -504,8 +505,12 @@ export default function PrayerTrackerScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+    <AuthGuard
+      message="Sign in to save and organize your prayer requests. Your spiritual journey will be securely stored and accessible across all your devices."
+      showGuestWarning={true}
+    >
+      <View style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       
       {/* Modern Header */}
       <ModernHeader
@@ -673,6 +678,7 @@ export default function PrayerTrackerScreen() {
         />
       </BackgroundGradient>
     </View>
+    </AuthGuard>
   );
 }
 

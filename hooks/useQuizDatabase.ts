@@ -56,6 +56,22 @@ export interface UserQuizStats {
   longest_streak: number;
   favorite_category: string;
   total_time_spent_seconds: number;
+  average_accuracy: number;
+  level: number;
+  total_points: number;
+  achievements_unlocked: string[];
+  category_stats: Record<string, {
+    played: number;
+    correct: number;
+    accuracy: number;
+    best_score: number;
+  }>;
+  difficulty_stats: Record<string, {
+    played: number;
+    correct: number;
+    accuracy: number;
+    best_score: number;
+  }>;
   created_at?: string;
   updated_at?: string;
 }
@@ -89,6 +105,23 @@ export interface QuizStats {
   totalScore: number;
   currentStreak: number;
   longestStreak: number;
+  averageAccuracy: number;
+  currentLevel: number;
+  totalPoints: number;
+  achievements: string[];
+  categoryStats: Record<string, {
+    played: number;
+    correct: number;
+    accuracy: number;
+    best_score: number;
+  }>;
+  difficultyStats: Record<string, {
+    played: number;
+    correct: number;
+    accuracy: number;
+    best_score: number;
+  }>;
+  timeSpent: number;
 }
 
 const INITIAL_QUIZ_STATE: QuizState = {
@@ -122,7 +155,18 @@ export const useQuizDatabase = () => {
     averageScore: 0,
     totalScore: 0,
     currentStreak: 0,
-    longestStreak: 0
+    longestStreak: 0,
+    averageAccuracy: 0,
+    currentLevel: 1,
+    totalPoints: 0,
+    achievements: [],
+    categoryStats: {},
+    difficultyStats: {
+      easy: { played: 0, correct: 0, accuracy: 0, best_score: 0 },
+      medium: { played: 0, correct: 0, accuracy: 0, best_score: 0 },
+      hard: { played: 0, correct: 0, accuracy: 0, best_score: 0 }
+    },
+    timeSpent: 0
   });
   const [loading, setLoading] = useState(false);
 
@@ -151,17 +195,28 @@ export const useQuizDatabase = () => {
           const userStatsDoc = userStatsSnapshot.docs[0];
           const userStats = userStatsDoc.data() as UserQuizStats;
 
-          const newStats = {
+          const newStats: QuizStats = {
             totalGamesPlayed: userStats.total_sessions || 0,
             totalQuestionsAnswered: userStats.total_questions_answered || 0,
             totalCorrectAnswers: userStats.total_correct_answers || 0,
             bestStreak: userStats.longest_streak || 0,
-            averageScore: userStats.total_questions_answered > 0 
-              ? (userStats.total_correct_answers / userStats.total_questions_answered) * 100 
+            averageScore: userStats.total_questions_answered > 0
+              ? (userStats.total_correct_answers / userStats.total_questions_answered) * 100
               : 0,
             totalScore: userStats.best_score || 0,
             currentStreak: userStats.current_streak || 0,
-            longestStreak: userStats.longest_streak || 0
+            longestStreak: userStats.longest_streak || 0,
+            averageAccuracy: userStats.average_accuracy || 0,
+            currentLevel: userStats.level || 1,
+            totalPoints: userStats.total_points || 0,
+            achievements: userStats.achievements_unlocked || [],
+            categoryStats: userStats.category_stats || {},
+            difficultyStats: userStats.difficulty_stats || {
+              easy: { played: 0, correct: 0, accuracy: 0, bestScore: 0 },
+              medium: { played: 0, correct: 0, accuracy: 0, bestScore: 0 },
+              hard: { played: 0, correct: 0, accuracy: 0, bestScore: 0 }
+            },
+            timeSpent: userStats.total_time_spent_seconds || 0
           };
           
           console.log('Setting stats:', newStats);
@@ -176,7 +231,18 @@ export const useQuizDatabase = () => {
             averageScore: 0,
             totalScore: 0,
             currentStreak: 0,
-            longestStreak: 0
+            longestStreak: 0,
+            averageAccuracy: 0,
+            currentLevel: 1,
+            totalPoints: 0,
+            achievements: [],
+            categoryStats: {},
+            difficultyStats: {
+              easy: { played: 0, correct: 0, accuracy: 0, best_score: 0 },
+              medium: { played: 0, correct: 0, accuracy: 0, best_score: 0 },
+              hard: { played: 0, correct: 0, accuracy: 0, best_score: 0 }
+            },
+            timeSpent: 0
           });
         }
       } else {
@@ -189,7 +255,18 @@ export const useQuizDatabase = () => {
           averageScore: 0,
           totalScore: 0,
           currentStreak: 0,
-          longestStreak: 0
+          longestStreak: 0,
+          averageAccuracy: 0,
+          currentLevel: 1,
+          totalPoints: 0,
+          achievements: [],
+          categoryStats: {},
+          difficultyStats: {
+            easy: { played: 0, correct: 0, accuracy: 0, best_score: 0 },
+            medium: { played: 0, correct: 0, accuracy: 0, best_score: 0 },
+            hard: { played: 0, correct: 0, accuracy: 0, best_score: 0 }
+          },
+          timeSpent: 0
         });
       }
     } catch (error) {
@@ -202,7 +279,18 @@ export const useQuizDatabase = () => {
         averageScore: 0,
         totalScore: 0,
         currentStreak: 0,
-        longestStreak: 0
+        longestStreak: 0,
+        averageAccuracy: 0,
+        currentLevel: 1,
+        totalPoints: 0,
+        achievements: [],
+        categoryStats: {},
+        difficultyStats: {
+          easy: { played: 0, correct: 0, accuracy: 0, best_score: 0 },
+          medium: { played: 0, correct: 0, accuracy: 0, best_score: 0 },
+          hard: { played: 0, correct: 0, accuracy: 0, best_score: 0 }
+        },
+        timeSpent: 0
       });
     }
   };
@@ -324,6 +412,7 @@ export const useQuizDatabase = () => {
         return {
           ...prev,
           isCompleted: true,
+          isActive: false,
           showExplanation: false
         };
       }
@@ -354,32 +443,92 @@ export const useQuizDatabase = () => {
         const statsQuery = query(collection(db, 'user_quiz_stats'), where('user_id', '==', user.uid), limit(1));
         const userStatsSnapshot = await getDocs(statsQuery);
 
+        // Calculate new stats
+        const totalQuestions = quizState.questions.length;
+        const accuracy = totalQuestions > 0 ? (quizState.correctAnswers / totalQuestions) * 100 : 0;
+        const currentLevel = Math.floor(finalScore / 250) + 1; // Level based on total points
+
         if (!userStatsSnapshot.empty) {
           const userStatsDoc = userStatsSnapshot.docs[0];
           const existingStats = userStatsDoc.data() as UserQuizStats;
           
+          // Update category stats
+          const currentCategory = quizState.category;
+          const currentDifficulty = quizState.difficulty;
+          
+          const updatedCategoryStats = { ...existingStats.category_stats };
+          if (!updatedCategoryStats[currentCategory]) {
+            updatedCategoryStats[currentCategory] = { played: 0, correct: 0, accuracy: 0, best_score: 0 };
+          }
+          updatedCategoryStats[currentCategory].played += 1;
+          updatedCategoryStats[currentCategory].correct += quizState.correctAnswers;
+          updatedCategoryStats[currentCategory].accuracy = (updatedCategoryStats[currentCategory].correct / updatedCategoryStats[currentCategory].played) * 100;
+          updatedCategoryStats[currentCategory].best_score = Math.max(
+            updatedCategoryStats[currentCategory].best_score || 0,
+            finalScore
+          );
+
+          // Update difficulty stats
+          const updatedDifficultyStats = { ...existingStats.difficulty_stats };
+          if (!updatedDifficultyStats[currentDifficulty]) {
+            updatedDifficultyStats[currentDifficulty] = { played: 0, correct: 0, accuracy: 0, best_score: 0 };
+          }
+          updatedDifficultyStats[currentDifficulty].played += 1;
+          updatedDifficultyStats[currentDifficulty].correct += quizState.correctAnswers;
+          updatedDifficultyStats[currentDifficulty].accuracy = (updatedDifficultyStats[currentDifficulty].correct / updatedDifficultyStats[currentDifficulty].played) * 100;
+          updatedDifficultyStats[currentDifficulty].best_score = Math.max(
+            updatedDifficultyStats[currentDifficulty].best_score || 0,
+            finalScore
+          );
+
           await updateDoc(userStatsDoc.ref, {
             total_sessions: (existingStats.total_sessions || 0) + 1,
-            total_questions_answered: (existingStats.total_questions_answered || 0) + quizState.questions.length,
+            total_questions_answered: (existingStats.total_questions_answered || 0) + totalQuestions,
             total_correct_answers: (existingStats.total_correct_answers || 0) + quizState.correctAnswers,
             best_score: Math.max(existingStats.best_score || 0, finalScore),
             current_streak: quizState.streak,
             longest_streak: Math.max(existingStats.longest_streak || 0, quizState.streak),
             total_time_spent_seconds: (existingStats.total_time_spent_seconds || 0) + 600,
+            average_accuracy: ((existingStats.average_accuracy || 0) + accuracy) / 2,
+            level: Math.max(existingStats.level || 1, currentLevel),
+            total_points: Math.max(existingStats.total_points || 0, finalScore), // Track highest, not accumulate
+            category_stats: updatedCategoryStats,
+            difficulty_stats: updatedDifficultyStats,
             updated_at: new Date().toISOString()
           });
 
         } else {
-          // Create new stats entry
+          // Create new stats entry with enhanced data
+          const categoryStats: Record<string, any> = {};
+          categoryStats[quizState.category] = {
+            played: 1,
+            correct: quizState.correctAnswers,
+            accuracy: accuracy,
+            best_score: finalScore
+          };
+
+          const difficultyStats: Record<string, any> = {};
+          difficultyStats[quizState.difficulty] = {
+            played: 1,
+            correct: quizState.correctAnswers,
+            accuracy: accuracy,
+            best_score: finalScore
+          };
+
           await addDoc(collection(db, 'user_quiz_stats'), {
             user_id: user.uid,
             total_sessions: 1,
-            total_questions_answered: quizState.questions.length,
+            total_questions_answered: totalQuestions,
             total_correct_answers: quizState.correctAnswers,
             best_score: finalScore,
             current_streak: quizState.streak,
             longest_streak: quizState.streak,
             total_time_spent_seconds: 600,
+            average_accuracy: accuracy,
+            level: currentLevel,
+            total_points: finalScore, // Initial score is fine for new users
+            category_stats: categoryStats,
+            difficulty_stats: difficultyStats,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           });
@@ -393,11 +542,24 @@ export const useQuizDatabase = () => {
       console.error('Error completing quiz:', error);
     }
 
-    setStats(prev => ({
-      ...prev,
-      totalGamesPlayed: prev.totalGamesPlayed + 1,
-      totalScore: Math.max(prev.totalScore, finalScore)
-    }));
+    // Update local state
+    setStats(prev => {
+      const totalQuestions = quizState.questions.length;
+      const accuracy = totalQuestions > 0 ? (quizState.correctAnswers / totalQuestions) * 100 : 0;
+      const currentLevel = Math.floor(Math.max(prev.totalScore, finalScore) / 250) + 1; // Use highest score for level calculation
+
+      return {
+        ...prev,
+        totalGamesPlayed: prev.totalGamesPlayed + 1,
+        totalQuestionsAnswered: prev.totalQuestionsAnswered + totalQuestions,
+        totalCorrectAnswers: prev.totalCorrectAnswers + quizState.correctAnswers,
+        totalScore: Math.max(prev.totalScore, finalScore), // Only track highest score
+        totalPoints: Math.max(prev.totalPoints, finalScore), // Don't accumulate, track highest
+        averageAccuracy: ((prev.averageAccuracy * prev.totalGamesPlayed) + accuracy) / (prev.totalGamesPlayed + 1),
+        currentLevel: Math.max(prev.currentLevel, currentLevel),
+        timeSpent: prev.timeSpent + 600
+      };
+    });
   }, [quizState, user, loadUserStats]);
 
   // Get current question

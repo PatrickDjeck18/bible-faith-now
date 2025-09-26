@@ -46,10 +46,11 @@ import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../../consta
 import { useAuth } from '../../hooks/useAuth';
 import BackgroundGradient from '@/components/BackgroundGradient';
 import { router } from 'expo-router';
-import { useMoodTracker } from '../../hooks/useMoodTracker';
+import { useUnifiedMoodTracker } from '../../hooks/useUnifiedMoodTracker';
 import { emitMoodEntrySaved } from '../../lib/eventEmitter';
 import BannerAd from '@/components/BannerAd';
 import { useInterstitialAds } from '@/hooks/useInterstitialAds';
+import AuthGuard from '@/components/auth/AuthGuard';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -214,7 +215,7 @@ const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 export default function MoodTrackerScreen() {
   const { user, isAuthenticated, loading: authLoading } = useAuth();
-  const { addMoodEntryToState } = useMoodTracker();
+  const { saveMoodEntry, deleteMoodEntry, refetch } = useUnifiedMoodTracker();
   const { showInterstitialAd } = useInterstitialAds('mood');
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
@@ -232,12 +233,12 @@ export default function MoodTrackerScreen() {
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
 
   useEffect(() => {
-    if (user?.uid && !authLoading) {
+    if (user && !authLoading) {
       fetchMoodHistory();
-    } else if (!user?.uid && !authLoading) {
+    } else if (!user && !authLoading) {
       setMoodHistory([]);
     }
-  }, [user?.uid, isAuthenticated, authLoading]);
+  }, [user, isAuthenticated, authLoading]);
 
   useEffect(() => {
     if (modalVisible) {
@@ -286,10 +287,22 @@ export default function MoodTrackerScreen() {
 
   const fetchMoodHistory = async () => {
     try {
-      if (!user?.uid) {
+      // For guest users, we need to handle mood history differently
+      if (!user) {
         setMoodHistory([]);
         return;
       }
+      
+      // If it's a guest user, we need to handle mood history differently
+      if (user.isGuest) {
+        // Guest users use local storage - for now, we'll show empty history
+        // The mood entries are managed by the unified hook and will be displayed
+        // through the moodStats that the hook provides
+        setMoodHistory([]);
+        return;
+      }
+      
+      // For authenticated users, fetch from Firebase
       const moodsRef = collection(db, 'mood_entries');
       const q = query(
         moodsRef,
@@ -304,13 +317,26 @@ export default function MoodTrackerScreen() {
         const data = doc.data();
         const moodId = data.mood_id || 'calm_003_content';
         const moodData = getMoodData(moodId);
+        
+        // Handle created_at properly - it might be a Date object or a number (timestamp)
+        let createdAt;
+        if (data.created_at instanceof Date) {
+          createdAt = data.created_at;
+        } else if (typeof data.created_at === 'number') {
+          createdAt = new Date(data.created_at);
+        } else if (data.created_at && typeof data.created_at.toDate === 'function') {
+          createdAt = data.created_at.toDate();
+        } else {
+          createdAt = new Date();
+        }
+        
         return {
           id: doc.id,
           mood_id: moodId,
-          mood_type: moodData.label.split(' ')[0],
-          emoji: moodData.icon,
+          mood_type: moodData.label.split(' ').slice(1).join(' ') || 'Unknown', // Get the text part after emoji
+          emoji: moodData.label.split(' ')[0], // Use the emoji from the label
           notes: data.note || '',
-          created_at: data.created_at?.toDate() || new Date(),
+          created_at: createdAt,
           intensity_rating: data.intensity_rating || null,
         };
       });
@@ -361,12 +387,15 @@ export default function MoodTrackerScreen() {
   };
 
   const saveMood = async () => {
+    console.log('🔴 MOOD TRACKER: saveMood called, selectedMood:', selectedMood);
+    
     if (!selectedMood) {
       Alert.alert('Select a Mood', 'Please select a mood before saving.');
       return;
     }
 
-    if (authLoading || !user?.uid) {
+    if (authLoading || !user) {
+      console.log('🔴 MOOD TRACKER: Auth issue - loading:', authLoading, 'user:', user);
       Alert.alert('Authentication Required', 'You need to be signed in to save moods.');
       return;
     }
@@ -374,108 +403,64 @@ export default function MoodTrackerScreen() {
     setMoodLoading(true);
     
     try {
-      const userId = user.uid;
-
-      // Check if user profile exists in Firestore (optional but good practice)
-      const profileRef = doc(db, 'profiles', userId);
-      const profileSnap = await getDoc(profileRef);
-      if (!profileSnap.exists()) {
-        await setDoc(profileRef, {
-          full_name: user.displayName || user.email?.split('@')[0] || 'User',
-          email: user.email,
-          journey_start_date: new Date().toISOString(),
-        });
+      // Get the mood label from the selected mood ID
+      const moodData = allMoods.find(m => m.id === selectedMood);
+      if (!moodData) {
+        console.log('🔴 MOOD TRACKER: Invalid mood selected:', selectedMood);
+        Alert.alert('Error', 'Invalid mood selected.');
+        return;
       }
 
-      const findMoodData = (moodId: string) => {
-        const mood = allMoods.find(m => m.id === moodId);
-        if (!mood) return { emoji: '🙂', type: 'Neutral' as const, rating: 6 };
-        const emoji = mood.label.split(' ')[0];
-        const map: Record<string, { type: string; rating: number }>= {
-          positive_001_blessed: { type: 'Joyful', rating: 9 },
-          positive_002_happy: { type: 'Happy', rating: 8 },
-          positive_003_joyful: { type: 'Joyful', rating: 9 },
-          positive_004_grateful: { type: 'Grateful', rating: 8 },
-          positive_005_excited: { type: 'Excited', rating: 8 },
-          positive_006_loved: { type: 'Joyful', rating: 8 },
-          positive_007_proud: { type: 'Joyful', rating: 8 },
-          calm_001_peaceful: { type: 'Peaceful', rating: 7 },
-          calm_002_calm: { type: 'Calm', rating: 6 },
-          calm_003_content: { type: 'Neutral', rating: 6 },
-          calm_004_prayerful: { type: 'Peaceful', rating: 7 },
-          energetic_001_motivated: { type: 'Excited', rating: 8 },
-          energetic_002_focused: { type: 'Excited', rating: 7 },
-          energetic_003_creative: { type: 'Excited', rating: 7 },
-          energetic_004_inspired: { type: 'Excited', rating: 8 },
-          energetic_005_accomplished: { type: 'Joyful', rating: 9 },
-          challenging_001_sad: { type: 'Sad', rating: 3 },
-          challenging_002_anxious: { type: 'Anxious', rating: 3 },
-          challenging_003_stressed: { type: 'Stressed', rating: 3 },
-          challenging_004_angry: { type: 'Stressed', rating: 2 },
-          challenging_005_frustrated: { type: 'Stressed', rating: 3 },
-          challenging_006_tired: { type: 'Neutral', rating: 4 },
-          challenging_007_lonely: { type: 'Sad', rating: 3 },
-          challenging_008_confused: { type: 'Worried', rating: 4 },
-          challenging_009_fearful: { type: 'Anxious', rating: 2 },
-          curious_001_curious: { type: 'Neutral', rating: 5 },
-          curious_002_surprised: { type: 'Excited', rating: 7 },
-          curious_003_hopeful: { type: 'Joyful', rating: 7 },
-          spiritual_001_inspired: { type: 'Joyful', rating: 8 },
-          spiritual_002_connected: { type: 'Peaceful', rating: 7 },
-          spiritual_003_faithful: { type: 'Peaceful', rating: 7 },
-          health_001_healthy: { type: 'Calm', rating: 7 },
-          health_002_rested: { type: 'Peaceful', rating: 7 },
-          health_003_balanced: { type: 'Calm', rating: 6 },
-        };
-        const mapped = map[moodId] || { type: 'Neutral', rating: 6 };
-        return { emoji, ...mapped };
-      };
-
-      const { emoji, type: mood_type, rating: intensity_rating } = findMoodData(selectedMood);
-
-      const newMoodRef = await addDoc(collection(db, 'mood_entries'), {
-        user_id: userId,
-        mood_id: selectedMood,
-        mood_type,
-        intensity_rating,
-        emoji,
-        note: notes.trim() || null,
-        created_at: new Date(),
+      // Extract the mood label from the emoji + text format (e.g., "😊 Happy" -> "Happy")
+      const moodLabel = moodData.label.split(' ').slice(1).join(' ');
+      console.log('🔴 MOOD TRACKER: Mood label extracted:', moodLabel);
+      
+      // Use the hook's saveMoodEntry function which handles the authentication properly
+      console.log('🔴 MOOD TRACKER: Calling saveMoodEntry with:', {
+        mood: moodLabel,
+        rating: 6,
+        influences: [],
+        note: notes.trim() || ''
       });
       
-      const now = new Date();
-      const newEntry = {
-        id: newMoodRef.id,
-        user_id: userId,
-        mood_id: selectedMood,
-        mood_type,
-        emoji,
-        note: notes.trim() || '',
-        notes: notes.trim() || '',
-        created_at: now,
-        entry_date: now,
-        updated_at: now,
-        intensity_rating,
-      };
+      const { data: savedEntry, error } = await saveMoodEntry(
+        moodLabel,
+        6, // Default intensity rating
+        [], // Empty influences array for now
+        notes.trim() || ''
+      );
 
-      addMoodEntryToState();
-      
-      Animated.sequence([
-        Animated.timing(scaleAnim, { toValue: 1.05, duration: 100, useNativeDriver: true }),
-        Animated.timing(scaleAnim, { toValue: 1, duration: 100, useNativeDriver: true }),
-      ]).start();
+      console.log('🔴 MOOD TRACKER: saveMoodEntry response:', { savedEntry, error });
 
-      Alert.alert('Success', 'Your current mood has been recorded! 🎉');
-      
-      setSelectedMood(null);
-      setNotes('');
-      setModalVisible(false);
-      fetchMoodHistory();
-      
-      emitMoodEntrySaved(newEntry);
+      if (error) {
+        console.error('🔴 MOOD TRACKER: Error from saveMoodEntry:', error);
+        throw new Error(error.message || 'Failed to save mood entry');
+      }
+
+      if (savedEntry) {
+        console.log('🔴 MOOD TRACKER: Successfully saved mood entry:', savedEntry);
+        // Refresh the mood data
+        await refetch();
+        
+        Animated.sequence([
+          Animated.timing(scaleAnim, { toValue: 1.05, duration: 100, useNativeDriver: true }),
+          Animated.timing(scaleAnim, { toValue: 1, duration: 100, useNativeDriver: true }),
+        ]).start();
+
+        Alert.alert('Success', 'Your current mood has been recorded! 🎉');
+        
+        setSelectedMood(null);
+        setNotes('');
+        setModalVisible(false);
+        fetchMoodHistory();
+        
+        emitMoodEntrySaved(savedEntry);
+      } else {
+        console.log('🔴 MOOD TRACKER: No saved entry returned');
+      }
       
     } catch (error: any) {
-      console.error('Error saving mood:', error);
+      console.error('🔴 MOOD TRACKER: Error saving mood:', error);
       Alert.alert('Error', `Failed to save mood: ${error.message || 'Unknown error'}`);
     } finally {
       setMoodLoading(false);
@@ -488,20 +473,23 @@ export default function MoodTrackerScreen() {
   };
 
   const confirmDelete = async () => {
-    if (!entryToDelete || !user?.uid) {
+    if (!entryToDelete || !user) {
       cancelDelete();
       return;
     }
 
     try {
-      const docRef = doc(db, 'mood_entries', entryToDelete);
-      await deleteDoc(docRef);
+      // Use the unified hook's deleteMoodEntry function which handles both guest and authenticated users
+      const { error } = await deleteMoodEntry(entryToDelete);
+      
+      if (error) {
+        throw new Error(error.message || 'Failed to delete mood entry');
+      }
       
       Alert.alert('Success', 'Mood entry deleted successfully!');
       
-      setMoodHistory(prevHistory => prevHistory.filter(entry => entry.id !== entryToDelete));
-      
-      fetchMoodHistory();
+      // Refresh the mood history
+      await fetchMoodHistory();
       
       setDeleteModalVisible(false);
       setEntryToDelete(null);
@@ -630,7 +618,7 @@ export default function MoodTrackerScreen() {
     );
   };
   
-  if (authLoading || !isAuthenticated) {
+  if (authLoading || !user) {
     return (
       <View style={styles.container}>
         <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
@@ -701,8 +689,12 @@ export default function MoodTrackerScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+    <AuthGuard
+      message="Sign in to save and organize your mood entries. Your emotional journey will be securely stored and accessible across all your devices."
+      showGuestWarning={true}
+    >
+      <View style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
       
       <View style={styles.headerSimple}>
         <View style={styles.headerSimpleContent}>
@@ -1128,6 +1120,7 @@ export default function MoodTrackerScreen() {
       </Modal>
       </BackgroundGradient>
     </View>
+    </AuthGuard>
   );
 }
 

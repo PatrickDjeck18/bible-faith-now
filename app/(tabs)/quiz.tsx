@@ -62,6 +62,10 @@ export default function QuizTabScreen() {
     router.push('/bible-quiz');
   };
 
+  const handleStartEnhancedQuiz = () => {
+    router.push('/bible-quiz-enhanced');
+  };
+
   const renderHeader = () => (
     <View>
       <Animated.View
@@ -112,6 +116,42 @@ export default function QuizTabScreen() {
     </Animated.View>
   );
 
+  const renderEnhancedQuizCard = () => (
+    <Animated.View style={{
+      opacity: fadeAnim,
+      transform: [{ translateY: slideAnim }],
+      marginTop: Spacing.lg
+    }}>
+      <TouchableOpacity
+        style={styles.enhancedQuizCard}
+        onPress={handleStartEnhancedQuiz}
+        activeOpacity={0.8}
+      >
+        <LinearGradient
+          colors={Colors.gradients.success}
+          style={styles.enhancedQuizGradient}
+        >
+          <View style={styles.enhancedQuizContent}>
+            <View style={styles.enhancedQuizIcon}>
+              <Brain size={32} color="white" />
+            </View>
+            <View>
+              <Text style={styles.enhancedQuizTitle}>Enhanced Quiz</Text>
+              <Text style={styles.enhancedQuizDescription}>
+                Smart randomization prevents question repetition
+              </Text>
+              <View style={styles.featureList}>
+                <Text style={styles.featureItem}>✓ No repeating questions</Text>
+                <Text style={styles.featureItem}>✓ Learning optimized</Text>
+                <Text style={styles.featureItem}>✓ Level-based progression</Text>
+              </View>
+            </View>
+          </View>
+        </LinearGradient>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
@@ -123,6 +163,7 @@ export default function QuizTabScreen() {
         >
           {renderHeader()}
           {renderStartQuizCard()}
+          {renderEnhancedQuizCard()}
         </ScrollView>
       </BackgroundGradient>
     </View>
@@ -200,6 +241,46 @@ const styles = StyleSheet.create({
   },
   startQuizDescription: {
     fontSize: Typography.sizes.base,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: Spacing.xs,
+  },
+  enhancedQuizCard: {
+    borderRadius: BorderRadius.xl,
+    overflow: 'hidden',
+    ...Shadows.lg,
+  },
+  enhancedQuizGradient: {
+    padding: Spacing.xl,
+  },
+  enhancedQuizContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  enhancedQuizIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: BorderRadius.full,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: Spacing.lg,
+  },
+  enhancedQuizTitle: {
+    fontSize: Typography.sizes.xl,
+    fontWeight: Typography.weights.bold,
+    color: 'white',
+  },
+  enhancedQuizDescription: {
+    fontSize: Typography.sizes.base,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginTop: Spacing.xs,
+    lineHeight: Typography.lineHeights.relaxed,
+  },
+  featureList: {
+    marginTop: Spacing.sm,
+  },
+  featureItem: {
+    fontSize: Typography.sizes.sm,
     color: 'rgba(255, 255, 255, 0.8)',
     marginTop: Spacing.xs,
   },

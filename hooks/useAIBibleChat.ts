@@ -18,6 +18,7 @@ import {
 } from 'firebase/firestore';
 import { useAuth } from './useAuth'; // ⬅️ Assumes a useAuth hook exists
 import { cleanAIResponse } from '@/utils/textFormatting';
+import { config } from '@/lib/config';
 
 // Re-defining interfaces for clarity
 export interface ChatMessage {
@@ -291,11 +292,7 @@ export function useAIBibleChat() {
 
   // ➡️ Helper function to handle AI API calls
   const _fetchAIResponse = async (userMessage: string, categoryId: string, history: ChatMessage[]): Promise<string> => {
-    // This function remains the same as it interacts with the DeepSeek API, not Firebase.
-    // The only change is that it's a helper function and now part of this file.
-    // ... (rest of the API call logic)
-    const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions';
-    const API_KEY = process.env.EXPO_PUBLIC_DEEPSEEK_API_KEY; // Removed hardcoded fallback for security
+    const API_KEY = config.deepseek.apiKey;
 
     if (!API_KEY) {
       throw new Error('DeepSeek API key is not configured.');
@@ -338,7 +335,7 @@ Guidelines:
     };
 
     try {
-      const response = await fetch(DEEPSEEK_API_URL, {
+      const response = await fetch(config.deepseek.apiUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${API_KEY}`,

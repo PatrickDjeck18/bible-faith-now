@@ -6,17 +6,19 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
-// Utility function to clean markdown formatting from AI responses
+// Enhanced utility function to preserve meaningful formatting in AI responses
 function cleanAIResponse(text: string): string {
   if (!text) return text;
 
-  // Remove bold formatting (**text** or __text__)
-  let cleanedText = text.replace(/\*\*(.*?)\*\*/g, '$1');
-  cleanedText = cleanedText.replace(/__(.*?)__/g, '$1');
+  let cleanedText = text;
   
-  // Remove italic formatting (*text* or _text_)
-  cleanedText = cleanedText.replace(/\*(.*?)\*/g, '$1');
-  cleanedText = cleanedText.replace(/_(.*?)_/g, '$1');
+  // Preserve bold formatting but make it consistent
+  cleanedText = cleanedText.replace(/\*\*(.*?)\*\*/g, '**$1**');
+  cleanedText = cleanedText.replace(/__(.*?)__/g, '**$1**');
+  
+  // Preserve italic formatting but make it consistent
+  cleanedText = cleanedText.replace(/\*(.*?)\*/g, '*$1*');
+  cleanedText = cleanedText.replace(/_(.*?)_/g, '*$1*');
   
   // Remove strikethrough formatting (~~text~~)
   cleanedText = cleanedText.replace(/~~(.*?)~~/g, '$1');
@@ -29,6 +31,12 @@ function cleanAIResponse(text: string): string {
   
   // Ensure proper paragraph spacing
   cleanedText = cleanedText.replace(/\n\s*\n/g, '\n\n');
+  
+  // Format Bible verses with emphasis
+  cleanedText = cleanedText.replace(
+    /([A-Z][a-z]+(?:\s+\d+)?)\s*(\d+:\d+(?:-\d+)?)/g,
+    '**$1 $2**'
+  );
   
   return cleanedText;
 }
@@ -83,7 +91,11 @@ serve(async (req: Request) => {
 
     // DeepSeek API configuration
     const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions';
-    const DEEPSEEK_API_KEY = Deno.env.get('DEEPSEEK_API_KEY') || 'sk-a65800223d43491a818e11c4f6d27dbb';
+    const DEEPSEEK_API_KEY = Deno.env.get('DEEPSEEK_API_KEY');
+    
+    if (!DEEPSEEK_API_KEY) {
+      throw new Error('DeepSeek API key is not configured in environment variables.');
+    }
 
     // Category-specific system prompts
     const systemPrompts = {

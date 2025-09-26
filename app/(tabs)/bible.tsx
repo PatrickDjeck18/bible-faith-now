@@ -37,7 +37,8 @@ import {
   Headphones,
   SkipForward,
   SkipBack,
-  Type, ChevronLeft, ChevronRight
+  Type, ChevronLeft, ChevronRight,
+  Wifi, WifiOff
 } from 'lucide-react-native';
 import { BIBLE_BOOKS, OLD_TESTAMENT_BOOKS, NEW_TESTAMENT_BOOKS } from '@/constants/BibleBooks';
 import { useBibleAPI } from '../../hooks/useBibleAPI';
@@ -81,11 +82,15 @@ export default function BibleScreen() {
     currentPassage,
     loading,
     error,
+    isOnline,
     fetchBibles,
     fetchBooks,
     fetchChapters,
     fetchPassage,
     searchVerses,
+    clearOldCache,
+    fetchBooksWithOffline,
+    fetchChaptersWithOffline,
   } = useBibleAPI();
   const { todayActivity, updateBibleReading } = useDailyActivity();
   const tabBarHeight = useBottomTabBarHeight();
@@ -116,6 +121,7 @@ export default function BibleScreen() {
   const [selectedTestament, setSelectedTestament] = useState<'all' | 'old' | 'new'>('all');
   const [showChapterSelector, setShowChapterSelector] = useState(false);
   const [fontSize, setFontSize] = useState(18); // Default font size for verse text
+  const [showOfflineIndicator, setShowOfflineIndicator] = useState(false);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -144,11 +150,27 @@ export default function BibleScreen() {
       }),
     ]).start();
 
-    // Initialize data
+    // Initialize data with offline support
     initializeBibleData();
     
     // Check for navigation target
     checkNavigationTarget();
+    
+    // Start periodic cache cleanup
+    const cleanupInterval = setInterval(() => {
+      clearOldCache();
+    }, 24 * 60 * 60 * 1000); // Clean up every 24 hours
+    
+    // Monitor online status for UI indicators
+    const checkOnlineStatus = () => {
+      setShowOfflineIndicator(!isOnline);
+    };
+    
+    checkOnlineStatus();
+    
+    return () => {
+      clearInterval(cleanupInterval);
+    };
   }, []);
 
   const initializeBibleData = async () => {
@@ -156,6 +178,10 @@ export default function BibleScreen() {
       await fetchBibles();
     } catch (error) {
       console.error('Failed to initialize Bible data:', error);
+      // If offline, try to use cached data
+      if (!isOnline) {
+        console.log('📱 Offline mode - attempting to use cached Bible data');
+      }
     }
   };
 
@@ -208,7 +234,8 @@ export default function BibleScreen() {
       const preferredBible = bibles.find(bible => bible.id === selectedBible) || bibles[0];
       if (preferredBible) {
         setSelectedBible(preferredBible.id);
-        fetchBooks(preferredBible.id);
+        // Use offline-enhanced book fetching
+        fetchBooksWithOffline(preferredBible.id);
       }
     }
   }, [bibles]);
@@ -218,18 +245,23 @@ export default function BibleScreen() {
       const firstBook = books[0];
       if (firstBook) {
         setSelectedBook(firstBook);
-        fetchChapters(selectedBible, firstBook.id);
+        // Use offline-enhanced chapter fetching
+        fetchChaptersWithOffline(selectedBible, firstBook.id);
       }
     }
   }, [books, selectedBible]);
 
-  // Debug logging
+  // Debug logging and online status monitoring
   useEffect(() => {
     console.log('🔍 Debug - View mode:', viewMode);
     console.log('🔍 Debug - Current passage:', !!currentPassage);
     console.log('🔍 Debug - Selected book:', !!selectedBook);
     console.log('🔍 Debug - Should show BibleReader:', viewMode === 'read' && !!currentPassage && !!selectedBook);
-  }, [viewMode, currentPassage, selectedBook]);
+    console.log('🌐 Online status:', isOnline);
+    
+    // Update offline indicator
+    setShowOfflineIndicator(!isOnline);
+  }, [viewMode, currentPassage, selectedBook, isOnline]);
 
   // Filter books based on testament
   const filteredBooks = books.filter(book => {
@@ -244,7 +276,8 @@ export default function BibleScreen() {
     setSelectedBook(book);
     setViewMode('chapters');
     try {
-      await fetchChapters(selectedBible, book.id);
+      // Use offline-enhanced chapter fetching
+      await fetchChaptersWithOffline(selectedBible, book.id);
     } catch (error) {
       console.error('Failed to fetch chapters:', error);
     }
@@ -304,8 +337,8 @@ export default function BibleScreen() {
       setSelectedBook(book);
       setSelectedChapter(searchResult.chapterNumber);
       
-      // Fetch chapters for the book
-      await fetchChapters(selectedBible, book.id);
+      // Fetch chapters for the book with offline support
+      await fetchChaptersWithOffline(selectedBible, book.id);
       
       // Fetch the passage for the specific chapter
       const passageId = `${book.id}-${searchResult.chapterNumber}`;
@@ -336,11 +369,11 @@ export default function BibleScreen() {
         setSelectedBook(nextBook);
         setViewMode('read');
         try {
-          await fetchChapters(selectedBible, nextBook.id);
+          await fetchChaptersWithOffline(selectedBible, nextBook.id);
           // Wait a bit for chapters to load, then select first chapter
           setTimeout(async () => {
             // Re-fetch chapters to ensure we have the latest data
-            await fetchChapters(selectedBible, nextBook.id);
+            await fetchChaptersWithOffline(selectedBible, nextBook.id);
             setTimeout(async () => {
               if (apiChapters.length > 0) {
                 const firstChapter = apiChapters[0];
@@ -374,11 +407,11 @@ export default function BibleScreen() {
         setSelectedBook(prevBook);
         setViewMode('read');
         try {
-          await fetchChapters(selectedBible, prevBook.id);
+          await fetchChaptersWithOffline(selectedBible, prevBook.id);
           // Wait a bit for chapters to load, then select last chapter
           setTimeout(async () => {
             // Re-fetch chapters to ensure we have the latest data
-            await fetchChapters(selectedBible, prevBook.id);
+            await fetchChaptersWithOffline(selectedBible, prevBook.id);
             setTimeout(async () => {
               if (apiChapters.length > 0) {
                 const lastChapter = apiChapters[apiChapters.length - 1];
@@ -560,6 +593,14 @@ export default function BibleScreen() {
         
         {/* Banner Ad below header */}
         <BannerAd placement="bible" />
+        
+        {/* Offline indicator */}
+        {showOfflineIndicator && (
+          <View style={styles.offlineIndicator}>
+            <WifiOff size={16} color={Colors.warning[500]} />
+            <Text style={styles.offlineText}>Offline - Using cached data</Text>
+          </View>
+        )}
       </View>
     );
   };
@@ -1189,5 +1230,23 @@ const styles = StyleSheet.create({
       },
       fallbackTextContainer: {
         padding: Spacing.lg,
+      },
+      // Offline indicator styles
+      offlineIndicator: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: Colors.warning[100],
+        paddingVertical: Spacing.xs,
+        paddingHorizontal: Spacing.md,
+        marginHorizontal: Spacing.lg,
+        borderRadius: BorderRadius.md,
+        marginTop: Spacing.xs,
+      },
+      offlineText: {
+        fontSize: Typography.sizes.sm,
+        color: Colors.warning[700],
+        fontWeight: Typography.weights.medium,
+        marginLeft: Spacing.xs,
       },
 });

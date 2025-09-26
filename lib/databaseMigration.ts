@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { FirestoreService, COLLECTIONS } from './firestore';
 import { auth } from './firebase';
+import { SupabaseService } from './services/supabaseService';
 
 export interface MigrationProgress {
   totalRecords: number;
@@ -28,16 +29,15 @@ export class DatabaseMigrationService {
       this.progress.migratedRecords = 0;
       this.progress.totalRecords = 0;
 
-      // Calculate total records to migrate
+      // Calculate total records to migrate from Firestore
       const tables = ['profiles', 'daily_activities', 'mood_entries', 'prayers', 'dreams', 'quiz_sessions', 'user_quiz_stats'];
-      
+
       for (const table of tables) {
-        const { count } = await supabase
-          .from(table)
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', userId);
-        
-        this.progress.totalRecords += count || 0;
+        const firestoreRecords = await FirestoreService.getByUserId<any>(
+          COLLECTIONS[table.toUpperCase() as keyof typeof COLLECTIONS],
+          userId
+        );
+        this.progress.totalRecords += firestoreRecords.length || 0;
       }
 
       // Migrate each table
@@ -63,35 +63,31 @@ export class DatabaseMigrationService {
     this.progress.currentTable = 'profiles';
     console.log('🔄 Migrating profiles...');
 
-    const { data: profiles, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', userId);
-
-    if (error) {
-      console.error('❌ Error fetching profiles:', error);
-      return;
-    }
+    const profiles = await FirestoreService.getByUserId<any>(
+      COLLECTIONS.PROFILES,
+      userId
+    );
 
     for (const profile of profiles || []) {
       try {
-        // Check if profile already exists in Firestore
-        const existingProfiles = await FirestoreService.query(
-          COLLECTIONS.PROFILES,
-          [{ field: 'user_id', operator: '==', value: userId }]
-        );
-
-        if (existingProfiles.length === 0) {
-          await FirestoreService.create(COLLECTIONS.PROFILES, {
+        // Insert into Supabase (skip if exists)
+        const { data: existing, error: existErr } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('user_id', profile.user_id)
+          .maybeSingle();
+        if (existErr && existErr.code !== 'PGRST116') throw existErr;
+        if (!existing) {
+          await SupabaseService.create('profiles', {
             user_id: profile.user_id,
-            full_name: profile.full_name,
-            email: profile.email,
-            avatar_url: profile.avatar_url,
+            full_name: profile.full_name ?? null,
+            email: profile.email ?? null,
+            avatar_url: profile.avatar_url ?? null,
             journey_start_date: profile.journey_start_date,
             current_streak: profile.current_streak || 0,
             total_prayers: profile.total_prayers || 0,
             total_bible_readings: profile.total_bible_readings || 0
-          });
+          } as any);
         }
         this.progress.migratedRecords++;
       } catch (error) {
@@ -104,28 +100,23 @@ export class DatabaseMigrationService {
     this.progress.currentTable = 'daily_activities';
     console.log('🔄 Migrating daily activities...');
 
-    const { data: activities, error } = await supabase
-      .from('daily_activities')
-      .select('*')
-      .eq('user_id', userId);
-
-    if (error) {
-      console.error('❌ Error fetching daily activities:', error);
-      return;
-    }
+    const activities = await FirestoreService.getByUserId<any>(
+      COLLECTIONS.DAILY_ACTIVITIES,
+      userId
+    );
 
     for (const activity of activities || []) {
       try {
-        await FirestoreService.create(COLLECTIONS.DAILY_ACTIVITIES, {
+        await SupabaseService.create('daily_activities', {
           user_id: activity.user_id,
           activity_date: activity.activity_date,
           bible_reading_minutes: activity.bible_reading_minutes || 0,
           prayer_minutes: activity.prayer_minutes || 0,
           devotional_completed: activity.devotional_completed || false,
-          mood_rating: activity.mood_rating,
+          mood_rating: activity.mood_rating ?? null,
           activities_completed: activity.activities_completed || 0,
           goal_percentage: activity.goal_percentage || 0
-        });
+        } as any);
         this.progress.migratedRecords++;
       } catch (error) {
         console.error('❌ Error migrating daily activity:', error);
@@ -137,26 +128,21 @@ export class DatabaseMigrationService {
     this.progress.currentTable = 'mood_entries';
     console.log('🔄 Migrating mood entries...');
 
-    const { data: moodEntries, error } = await supabase
-      .from('mood_entries')
-      .select('*')
-      .eq('user_id', userId);
-
-    if (error) {
-      console.error('❌ Error fetching mood entries:', error);
-      return;
-    }
+    const moodEntries = await FirestoreService.getByUserId<any>(
+      COLLECTIONS.MOOD_ENTRIES,
+      userId
+    );
 
     for (const entry of moodEntries || []) {
       try {
-        await FirestoreService.create(COLLECTIONS.MOOD_ENTRIES, {
+        await SupabaseService.create('mood_entries', {
           user_id: entry.user_id,
           entry_date: entry.entry_date,
           mood_type: entry.mood_type,
           intensity_rating: entry.intensity_rating,
           emoji: entry.emoji,
-          note: entry.note
-        });
+          note: entry.note ?? null
+        } as any);
         this.progress.migratedRecords++;
       } catch (error) {
         console.error('❌ Error migrating mood entry:', error);
@@ -168,38 +154,33 @@ export class DatabaseMigrationService {
     this.progress.currentTable = 'prayers';
     console.log('🔄 Migrating prayers...');
 
-    const { data: prayers, error } = await supabase
-      .from('prayers')
-      .select('*')
-      .eq('user_id', userId);
-
-    if (error) {
-      console.error('❌ Error fetching prayers:', error);
-      return;
-    }
+    const prayers = await FirestoreService.getByUserId<any>(
+      COLLECTIONS.PRAYERS,
+      userId
+    );
 
     for (const prayer of prayers || []) {
       try {
-        await FirestoreService.create(COLLECTIONS.PRAYERS, {
+        await SupabaseService.create('prayers', {
           user_id: prayer.user_id,
           title: prayer.title,
-          description: prayer.description,
+          description: prayer.description ?? null,
           status: prayer.status,
           frequency: prayer.frequency,
           category: prayer.category,
           priority: prayer.priority,
           is_shared: prayer.is_shared || false,
           is_community: prayer.is_community || false,
-          answered_at: prayer.answered_at,
-          answered_notes: prayer.answered_notes,
-          prayer_notes: prayer.prayer_notes,
-          gratitude_notes: prayer.gratitude_notes,
-          reminder_time: prayer.reminder_time,
-          reminder_frequency: prayer.reminder_frequency,
-          last_prayed_at: prayer.last_prayed_at,
+          answered_at: prayer.answered_at ?? null,
+          answered_notes: prayer.answered_notes ?? null,
+          prayer_notes: prayer.prayer_notes ?? null,
+          gratitude_notes: prayer.gratitude_notes ?? null,
+          reminder_time: prayer.reminder_time ?? null,
+          reminder_frequency: prayer.reminder_frequency ?? null,
+          last_prayed_at: prayer.last_prayed_at ?? null,
           prayer_count: prayer.prayer_count || 0,
           answered_prayer_count: prayer.answered_prayer_count || 0
-        });
+        } as any);
         this.progress.migratedRecords++;
       } catch (error) {
         console.error('❌ Error migrating prayer:', error);
@@ -211,29 +192,24 @@ export class DatabaseMigrationService {
     this.progress.currentTable = 'dreams';
     console.log('🔄 Migrating dreams...');
 
-    const { data: dreams, error } = await supabase
-      .from('dreams')
-      .select('*')
-      .eq('user_id', userId);
-
-    if (error) {
-      console.error('❌ Error fetching dreams:', error);
-      return;
-    }
+    const dreams = await FirestoreService.getByUserId<any>(
+      COLLECTIONS.DREAMS,
+      userId
+    );
 
     for (const dream of dreams || []) {
       try {
-        await FirestoreService.create(COLLECTIONS.DREAMS, {
+        await SupabaseService.create('dreams', {
           user_id: dream.user_id,
           title: dream.title,
-          description: dream.description,
+          description: dream.description ?? null,
           dream_date: dream.dream_date,
           category: dream.category,
-          emotional_tone: dream.emotional_tone,
+          emotional_tone: dream.emotional_tone ?? null,
           is_lucid: dream.is_lucid || false,
-          interpretation: dream.interpretation,
+          interpretation: dream.interpretation ?? null,
           tags: dream.tags || []
-        });
+        } as any);
         this.progress.migratedRecords++;
       } catch (error) {
         console.error('❌ Error migrating dream:', error);
@@ -245,19 +221,14 @@ export class DatabaseMigrationService {
     this.progress.currentTable = 'quiz_sessions';
     console.log('🔄 Migrating quiz sessions...');
 
-    const { data: sessions, error } = await supabase
-      .from('quiz_sessions')
-      .select('*')
-      .eq('user_id', userId);
-
-    if (error) {
-      console.error('❌ Error fetching quiz sessions:', error);
-      return;
-    }
+    const sessions = await FirestoreService.getByUserId<any>(
+      COLLECTIONS.QUIZ_SESSIONS,
+      userId
+    );
 
     for (const session of sessions || []) {
       try {
-        await FirestoreService.create(COLLECTIONS.QUIZ_SESSIONS, {
+        await SupabaseService.create('quiz_sessions', {
           user_id: session.user_id,
           questions_answered: session.questions_answered || 0,
           correct_answers: session.correct_answers || 0,
@@ -266,8 +237,8 @@ export class DatabaseMigrationService {
           category: session.category,
           difficulty: session.difficulty,
           time_taken_seconds: session.time_taken_seconds || 0,
-          completed_at: session.completed_at
-        });
+          completed_at: session.completed_at ?? null
+        } as any);
         this.progress.migratedRecords++;
       } catch (error) {
         console.error('❌ Error migrating quiz session:', error);
@@ -279,19 +250,14 @@ export class DatabaseMigrationService {
     this.progress.currentTable = 'user_quiz_stats';
     console.log('🔄 Migrating user quiz stats...');
 
-    const { data: stats, error } = await supabase
-      .from('user_quiz_stats')
-      .select('*')
-      .eq('user_id', userId);
-
-    if (error) {
-      console.error('❌ Error fetching user quiz stats:', error);
-      return;
-    }
+    const stats = await FirestoreService.getByUserId<any>(
+      COLLECTIONS.USER_QUIZ_STATS,
+      userId
+    );
 
     for (const stat of stats || []) {
       try {
-        await FirestoreService.create(COLLECTIONS.USER_QUIZ_STATS, {
+        await SupabaseService.create('user_quiz_stats', {
           user_id: stat.user_id,
           total_sessions: stat.total_sessions || 0,
           total_questions_answered: stat.total_questions_answered || 0,
@@ -299,9 +265,9 @@ export class DatabaseMigrationService {
           best_score: stat.best_score || 0,
           current_streak: stat.current_streak || 0,
           longest_streak: stat.longest_streak || 0,
-          favorite_category: stat.favorite_category,
+          favorite_category: stat.favorite_category ?? 'mixed',
           total_time_spent_seconds: stat.total_time_spent_seconds || 0
-        });
+        } as any);
         this.progress.migratedRecords++;
       } catch (error) {
         console.error('❌ Error migrating user quiz stats:', error);

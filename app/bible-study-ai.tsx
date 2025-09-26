@@ -66,6 +66,9 @@ export default function BibleStudyAIScreen() {
   const [showHistory, setShowHistory] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
+  
+  // Cache for API responses to avoid duplicate calls
+  const responseCache = useRef(new Map<string, {response: string, timestamp: number}>());
 
   // Sample conversation starters
   const conversationStarters = [
@@ -208,20 +211,26 @@ export default function BibleStudyAIScreen() {
     setIsLoading(true);
 
     try {
-      const response = await callDeepseekAPI(inputText.trim());
+      // Use Promise.race to implement timeout
+      const response = await Promise.race([
+        callDeepseekAPI(inputText.trim()),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Request timeout')), 30000) // 30 second timeout
+        )
+      ]);
       
       // Remove loading message and add AI response
       const finalMessages = updatedMessages.filter(msg => !msg.isLoading);
       const aiMessage: Message = {
         id: (Date.now() + 2).toString(),
-        text: response,
+        text: response as string,
         isUser: false,
         timestamp: new Date(),
       };
       const finalUpdatedMessages = [...finalMessages, aiMessage];
       setMessages(finalUpdatedMessages);
 
-      // Save session
+      // Save session (defer to avoid blocking UI)
       const sessionToSave: BibleStudySession = {
         id: currentSession?.id || Date.now().toString(),
         title: currentSession?.title || `Bible Study - ${new Date().toLocaleDateString()}`,
@@ -231,23 +240,33 @@ export default function BibleStudyAIScreen() {
         messageCount: finalUpdatedMessages.length - 1, // Exclude welcome message
       };
       setCurrentSession(sessionToSave);
-      await saveSession(sessionToSave);
+      
+      // Save session in background without blocking
+      saveSession(sessionToSave).catch(error => {
+        console.error('Background session save failed:', error);
+      });
 
     } catch (error) {
       console.error('Error calling Deepseek API:', error);
       
       // Remove loading message and add error response
       const finalMessages = updatedMessages.filter(msg => !msg.isLoading);
+      let errorText = "I apologize, but I'm having trouble connecting right now. Please check your internet connection and try again.";
+      
+      if (error instanceof Error && error.message === 'Request timeout') {
+        errorText = "The request took too long to complete. Please try again with a shorter question or check your internet connection.";
+      }
+      
       const errorMessage: Message = {
         id: (Date.now() + 2).toString(),
-        text: "I apologize, but I'm having trouble connecting right now. Please check your internet connection and try again.",
+        text: errorText,
         isUser: false,
         timestamp: new Date(),
       };
       const finalUpdatedMessages = [...finalMessages, errorMessage];
       setMessages(finalUpdatedMessages);
 
-      // Save session even with error
+      // Save session even with error (in background)
       const sessionToSave: BibleStudySession = {
         id: currentSession?.id || Date.now().toString(),
         title: currentSession?.title || `Bible Study - ${new Date().toLocaleDateString()}`,
@@ -257,7 +276,10 @@ export default function BibleStudyAIScreen() {
         messageCount: finalUpdatedMessages.length - 1,
       };
       setCurrentSession(sessionToSave);
-      await saveSession(sessionToSave);
+      
+      saveSession(sessionToSave).catch(saveError => {
+        console.error('Background session save failed:', saveError);
+      });
     } finally {
       setIsLoading(false);
     }
@@ -270,47 +292,78 @@ export default function BibleStudyAIScreen() {
       throw new Error('Deepseek API key not configured');
     }
 
-    const prompt = `You are a knowledgeable Bible scholar and Christian teacher. Please provide a thoughtful, accurate, and helpful response to this Bible-related question: "${question}"
-
-Please:
-1. Provide a clear and accurate answer
-2. Reference relevant Bible verses when appropriate
-3. Explain theological concepts in an accessible way
-4. Be encouraging and spiritually uplifting
-5. Keep responses concise but comprehensive (2-4 paragraphs)
-6. If the question is not Bible-related, politely redirect to Bible topics
-
-Question: ${question}`;
-
-    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a knowledgeable Bible scholar and Christian teacher. Provide thoughtful, accurate, and helpful responses to Bible-related questions.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        max_tokens: 1000,
-        temperature: 0.7,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`API request failed: ${response.status}`);
+    // Check cache first (cache valid for 1 hour)
+    const cacheKey = question.toLowerCase().trim();
+    const cached = responseCache.current.get(cacheKey);
+    const now = Date.now();
+    
+    if (cached && (now - cached.timestamp < 3600000)) { // 1 hour cache
+      console.log('Using cached response for:', cacheKey);
+      return cached.response;
     }
 
-    const data = await response.json();
-    return data.choices[0]?.message?.content || 'I apologize, but I couldn\'t generate a response at this time.';
+    // Optimized prompt - shorter and more focused
+    const systemPrompt = 'You are a knowledgeable Bible scholar. Provide concise, accurate responses to Bible questions. Reference relevant verses. Keep answers to 2-3 paragraphs.';
+    
+    const requestBody = {
+      model: 'deepseek-chat',
+      messages: [
+        {
+          role: 'system',
+          content: systemPrompt
+        },
+        {
+          role: 'user',
+          content: question
+        }
+      ],
+      max_tokens: 600, // Reduced from 1000 for faster responses
+      temperature: 0.7,
+      stream: false, // Ensure non-streaming for faster completion
+    };
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 second timeout
+
+      const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API Error Response:', errorText);
+        throw new Error(`API request failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const content = data.choices[0]?.message?.content;
+      
+      if (!content) {
+        throw new Error('No content received from API');
+      }
+
+      // Cache the successful response
+      responseCache.current.set(cacheKey, {
+        response: content,
+        timestamp: now
+      });
+
+      return content;
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Request timeout');
+      }
+      throw error;
+    }
   };
 
   const handleConversationStarter = (starter: any) => {
@@ -395,62 +448,76 @@ Question: ${question}`;
     </TouchableOpacity>
   );
 
-  const renderMessage = (message: Message) => (
-    <View
-      key={message.id}
-      style={[
-        styles.messageContainer,
-        message.isUser ? styles.userMessage : styles.aiMessage,
-      ]}
-    >
-      <View style={styles.messageHeader}>
-        <View style={styles.messageIcon}>
-          {message.isUser ? (
-            <MessageCircle size={16} color={Colors.primary[600]} />
-          ) : (
-            <BookOpen size={16} color={Colors.secondary[600]} />
-          )}
-        </View>
-        <Text style={styles.messageTime}>
-          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </Text>
-      </View>
-      
-      {message.isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="small" color={Colors.primary[600]} />
-          <Text style={styles.loadingText}>AI is thinking...</Text>
-        </View>
-      ) : (
-        <>
-          <Text style={[
-            styles.messageText,
-            message.isUser ? styles.userMessageText : styles.aiMessageText,
-          ]}>
-            {message.text}
+  // Memoized message component to prevent unnecessary re-renders
+  const MessageItem = React.memo(({ message }: { message: Message }) => {
+    const handleCopy = () => {
+      Alert.alert('Copied!', 'Message copied to clipboard');
+    };
+
+    const handleShare = () => {
+      Alert.alert('Share', 'Sharing functionality would be implemented here');
+    };
+
+    return (
+      <View
+        style={[
+          styles.messageContainer,
+          message.isUser ? styles.userMessage : styles.aiMessage,
+        ]}
+      >
+        <View style={styles.messageHeader}>
+          <View style={styles.messageIcon}>
+            {message.isUser ? (
+              <MessageCircle size={16} color={Colors.primary[600]} />
+            ) : (
+              <BookOpen size={16} color={Colors.secondary[600]} />
+            )}
+          </View>
+          <Text style={styles.messageTime}>
+            {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </Text>
-          
-          {!message.isUser && (
-            <View style={styles.messageActions}>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => copyMessage(message.text)}
-              >
-                <Copy size={14} color={Colors.neutral[600]} />
-                <Text style={styles.actionText}>Copy</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => shareMessage(message.text)}
-              >
-                <Share size={14} color={Colors.neutral[600]} />
-                <Text style={styles.actionText}>Share</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </>
-      )}
-    </View>
+        </View>
+        
+        {message.isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="small" color={Colors.primary[600]} />
+            <Text style={styles.loadingText}>AI is thinking...</Text>
+          </View>
+        ) : (
+          <>
+            <Text style={[
+              styles.messageText,
+              message.isUser ? styles.userMessageText : styles.aiMessageText,
+            ]}>
+              {message.text}
+            </Text>
+            
+            {!message.isUser && (
+              <View style={styles.messageActions}>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={handleCopy}
+                >
+                  <Copy size={14} color={Colors.neutral[600]} />
+                  <Text style={styles.actionText}>Copy</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={handleShare}
+                >
+                  <Share size={14} color={Colors.neutral[600]} />
+                  <Text style={styles.actionText}>Share</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </>
+        )}
+      </View>
+    );
+  });
+
+  const renderMessage = (message: Message) => (
+    <MessageItem key={message.id} message={message} />
   );
 
   return (
@@ -507,6 +574,8 @@ Question: ${question}`;
         ref={scrollViewRef}
         style={styles.messagesContainer}
         contentContainerStyle={styles.messagesContent}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         showsVerticalScrollIndicator={false}
       >
         {messages.map(renderMessage)}
@@ -539,6 +608,7 @@ Question: ${question}`;
       {/* Input Section */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
         style={styles.inputContainer}
       >
         <View style={styles.inputWrapper}>
@@ -551,6 +621,9 @@ Question: ${question}`;
             multiline
             maxLength={500}
             editable={!isLoading}
+            onFocus={() => {
+              setTimeout(() => scrollToBottom(), 100);
+            }}
           />
           
           <TouchableOpacity

@@ -1,13 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ADS_CONFIG, AD_PLACEMENTS } from '../lib/adsConfig';
 import { AdManager } from '../lib/adMobService';
-import { revenueCatService, PurchaseInfo } from '../lib/revenueCatService';
-import { PurchasesPackage } from 'react-native-purchases';
 
 export interface AdsState {
   isPremium: boolean;
   showAds: boolean;
-  purchaseInfo: PurchaseInfo;
   isLoading: boolean;
 }
 
@@ -15,12 +12,7 @@ export const useAds = () => {
   const [adsState, setAdsState] = useState<AdsState>({
     isPremium: false,
     showAds: true,
-    purchaseInfo: {
-      isPremium: false,
-      entitlements: [],
-      activeSubscriptions: [],
-    },
-    isLoading: true,
+    isLoading: false,
   });
 
   // Load purchase info and determine if ads should be shown
@@ -28,13 +20,13 @@ export const useAds = () => {
     try {
       setAdsState(prev => ({ ...prev, isLoading: true }));
       
-      const purchaseInfo = await revenueCatService.getPurchaseInfo();
-      const showAds = !purchaseInfo.isPremium;
+      // Since RevenueCat is removed, all users will see ads
+      const showAds = true;
+      const isPremium = false;
 
       setAdsState({
-        isPremium: purchaseInfo.isPremium,
+        isPremium,
         showAds,
-        purchaseInfo,
         isLoading: false,
       });
     } catch (error) {
@@ -43,20 +35,9 @@ export const useAds = () => {
     }
   }, []);
 
-  // Initialize and set up listeners
+  // Initialize
   useEffect(() => {
     loadPurchaseInfo();
-
-    // Set up purchase listener
-    revenueCatService.setupPurchaseListener((purchaseInfo) => {
-      const showAds = !purchaseInfo.isPremium;
-      setAdsState({
-        isPremium: purchaseInfo.isPremium,
-        showAds,
-        purchaseInfo,
-        isLoading: false,
-      });
-    });
   }, [loadPurchaseInfo]);
 
   // Show interstitial ad if user is not premium
@@ -85,33 +66,17 @@ export const useAds = () => {
     }
   }, [adsState.isPremium]);
 
-  // Purchase premium to remove ads
-  const purchasePremium = useCallback(async (packageToPurchase: PurchasesPackage) => {
-    try {
-      const success = await revenueCatService.purchasePackage(packageToPurchase);
-      if (success) {
-        await loadPurchaseInfo();
-      }
-      return success;
-    } catch (error) {
-      console.error('Error purchasing premium:', error);
-      return false;
-    }
-  }, [loadPurchaseInfo]);
+  // Purchase premium to remove ads (disabled since RevenueCat is removed)
+  const purchasePremium = useCallback(async () => {
+    console.log('Premium purchases are not available');
+    return false;
+  }, []);
 
-  // Restore purchases
+  // Restore purchases (disabled since RevenueCat is removed)
   const restorePurchases = useCallback(async () => {
-    try {
-      const success = await revenueCatService.restorePurchases();
-      if (success) {
-        await loadPurchaseInfo();
-      }
-      return success;
-    } catch (error) {
-      console.error('Error restoring purchases:', error);
-      return false;
-    }
-  }, [loadPurchaseInfo]);
+    console.log('Purchase restoration is not available');
+    return false;
+  }, []);
 
   return {
     ...adsState,

@@ -26,7 +26,7 @@ import SocialLoginButton from '@/components/auth/SocialLoginButton';
 const { width, height } = Dimensions.get('window');
 
 export default function SignUpScreen() {
-  const { signUpWithEmail, signInWithGoogle } = useAuth();
+  const { signUpWithEmail } = useAuth();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -34,12 +34,18 @@ export default function SignUpScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  
+
   // Form validation errors
   const [fullNameError, setFullNameError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
+
+  const isFullNameValid = fullName.trim().length >= 2 && !fullNameError;
+  const isEmailValidState = email.length > 0 && !emailError;
+  const isPasswordValidState = password.length >= 6 && !passwordError;
+  const isConfirmValid = confirmPassword.length > 0 && !confirmPasswordError && confirmPassword === password;
+  const isFormValid = isFullNameValid && isEmailValidState && isPasswordValidState && isConfirmValid;
 
   const validateFullName = (name: string) => {
     if (!name.trim()) {
@@ -155,25 +161,19 @@ export default function SignUpScreen() {
   };
 
   const handleSignUp = async () => {
-    const isFullNameValid = validateFullName(fullName);
-    const isEmailValid = validateEmail(email);
-    const isPasswordValid = validatePassword(password);
-    const isConfirmPasswordValid = validateConfirmPassword(confirmPassword, password);
-
-    if (!isFullNameValid || !isEmailValid || !isPasswordValid || !isConfirmPasswordValid) {
-      return;
-    }
+    const nameOk = validateFullName(fullName);
+    const emailOk = validateEmail(email);
+    const passOk = validatePassword(password);
+    const confirmOk = validateConfirmPassword(confirmPassword, password);
+    if (!nameOk || !emailOk || !passOk || !confirmOk) return;
 
     try {
       setLoading(true);
       const { data, error } = await signUpWithEmail(email.trim(), password, fullName.trim());
       
       if (error) {
-        if (error.message?.includes('User already registered')) {
-          Alert.alert('Account Exists', 'An account with this email already exists. Please sign in instead.');
-        } else {
-          Alert.alert('Sign Up Error', error.message || 'Failed to create account. Please try again.');
-        }
+        // Use the improved error handling from authErrors
+        Alert.alert('Sign Up Error', error.userFriendlyMessage || error.message || 'Failed to create account. Please try again.');
       } else if (data?.user) {
         Alert.alert(
           'Account Created Successfully! 🎉',
@@ -196,43 +196,7 @@ export default function SignUpScreen() {
   };
 
   const handleSocialLogin = async (provider: string) => {
-    if (provider === 'google') {
-      try {
-        setLoading(true);
-        console.log('🔴 Starting Google Sign-Up process...');
-        
-        const { data, error } = await signInWithGoogle();
-        
-        if (error) {
-          console.error('🔴 Google Sign-Up error:', error);
-          if (error.code === 'cancelled') {
-            // Don't show alert for user cancellation
-            console.log('🔴 Google Sign-Up was cancelled by user');
-          } else if (error.code === 'redirect') {
-            // Don't show alert for redirect, it's expected
-            console.log('🔴 Redirecting to Google Sign-Up...');
-          } else {
-            Alert.alert(
-              'Google Sign-Up Error', 
-              error.message || 'Failed to sign up with Google. Please try again.'
-            );
-          }
-        } else if (data && 'user' in data && data.user) {
-          console.log('🔴 Google sign up successful, user:', data.user?.uid);
-          // User will be automatically redirected by the auth state change
-        }
-      } catch (error) {
-        console.error('🔴 Google sign up error:', error);
-        Alert.alert(
-          'Connection Error', 
-          'Unable to connect to the server. Please check your internet connection and try again.'
-        );
-      } finally {
-        setLoading(false);
-      }
-    } else {
-      Alert.alert('Coming Soon', `${provider} signup will be available soon!`);
-    }
+    Alert.alert('Coming Soon', `${provider} signup will be available soon!`);
   };
 
   const passwordStrength = getPasswordStrength(password);
@@ -251,6 +215,8 @@ export default function SignUpScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          contentInsetAdjustmentBehavior="automatic"
         >
           {/* Header with Back Button */}
           <View style={styles.header}>
@@ -294,6 +260,8 @@ export default function SignUpScreen() {
                 onChangeText={handleFullNameChange}
                 autoCapitalize="words"
                 autoCorrect={false}
+                autoComplete="name"
+                returnKeyType="next"
                 error={fullNameError}
                 icon={<User size={20} color={Colors.neutral[600]} />}
               />
@@ -306,6 +274,8 @@ export default function SignUpScreen() {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
+                autoComplete="email"
+                returnKeyType="next"
                 error={emailError}
                 icon={<Mail size={20} color={Colors.neutral[600]} />}
               />
@@ -318,6 +288,8 @@ export default function SignUpScreen() {
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
                 autoCorrect={false}
+                autoComplete="new-password"
+                returnKeyType="next"
                 error={passwordError}
                 icon={<Lock size={20} color={Colors.neutral[600]} />}
                 rightIcon={
@@ -358,6 +330,9 @@ export default function SignUpScreen() {
                 secureTextEntry={!showConfirmPassword}
                 autoCapitalize="none"
                 autoCorrect={false}
+                autoComplete="new-password"
+                returnKeyType="go"
+                onSubmitEditing={handleSignUp}
                 error={confirmPasswordError}
                 success={confirmPassword.length > 0 && !confirmPasswordError}
                 icon={<Lock size={20} color={Colors.neutral[600]} />}
@@ -386,6 +361,7 @@ export default function SignUpScreen() {
                   title="Create Account"
                   onPress={handleSignUp}
                   loading={loading}
+                  disabled={!isFormValid || loading}
                   rightIcon={<ArrowRight size={20} color="white" />}
                   style={styles.signUpButton}
                 />
@@ -399,10 +375,7 @@ export default function SignUpScreen() {
 
                 {/* Social Login Buttons */}
                 <View style={styles.socialContainer}>
-                  <SocialLoginButton
-                    provider="google"
-                    onPress={() => handleSocialLogin('google')}
-                  />
+                  {/* Social login buttons removed */}
                 </View>
 
                 {/* Sign In Link */}

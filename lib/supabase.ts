@@ -1,28 +1,12 @@
-// import { initializeApp, FirebaseApp } from 'firebase/app';
-// import { getFirestore, Firestore } from 'firebase/firestore';
-// import { getAuth } from 'firebase/auth';
+import { createClient } from '@supabase/supabase-js';
+import { config } from './config';
 
-// // Your web app's Firebase configuration
-// const firebaseConfig = {
-//   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
-//   authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-//   projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-//   storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
-//   messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-//   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID
-// };
-
-// // Initialize Firebase
-// const app = initializeApp(firebaseConfig);
-// const db = getFirestore(app);
-// const auth = getAuth(app);
-
-// console.log('🟢 Firebase configuration:', { 
-//   projectId: firebaseConfig.projectId,
-//   initialized: !!db
-// });
-
-// export { app, db, auth };
+export const supabase = createClient(config.supabase.url, config.supabase.anonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+});
 
 // Database types... (rest of your file)
 // Database types - No changes needed as they are standard TypeScript

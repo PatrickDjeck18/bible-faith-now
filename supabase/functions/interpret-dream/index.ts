@@ -59,8 +59,12 @@ serve(async (req: Request) => {
 
     // DeepSeek API configuration with timeout
     const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions';
-    const apiKey = Deno.env.get('DEEPSEEK_API_KEY') || 'sk-a65800223d43491a818e11c4f6d27dbb';
+    const apiKey = Deno.env.get('DEEPSEEK_API_KEY');
     const API_TIMEOUT = 25000; // 25 second timeout
+    
+    if (!apiKey) {
+      throw new Error('DeepSeek API key is not configured in environment variables.');
+    }
 
     const prompt = `Analyze this dream from a biblical and spiritual perspective:
 

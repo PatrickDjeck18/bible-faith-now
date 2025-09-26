@@ -29,8 +29,6 @@ import {
   Calendar,
   Clock,
   Zap,
-  Play,
-  Star as PremiumStar,
 } from 'lucide-react-native';
 import { DreamService } from '../lib/services/dreamService';
 import { DreamEntry } from '../lib/types/dreams';
@@ -38,102 +36,16 @@ import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../constants
 import { useAuth } from '../hooks/useAuth';
 import BackgroundGradient from '@/components/BackgroundGradient';
 import { HeaderCard } from '@/components/HeaderCard';
-import { useSubscription } from '@/hooks/subsHook'; // Import subscription hook
-import Purchases from 'react-native-purchases'; // Import RevenueCat
 
 const { width: screenWidth } = Dimensions.get('window');
 
 type MoodOption = 'peaceful' | 'anxious' | 'joyful' | 'confused' | 'hopeful';
 
-// Real AdMob Rewarded Ad Service
-import { AdManager } from '../lib/adMobService';
-import { ADS_CONFIG } from '../lib/adsConfig';
-
-const rewardedAdService = AdManager.getRewarded(ADS_CONFIG.ADMOB.REWARDED_ID);
-
-// =================================================================================
-// Access Modal Component - The Paywall
-// =================================================================================
-const AccessModal = ({
-  visible,
-  onClose,
-  adsWatchedCount,
-  onWatchAd,
-  onUpgrade,
-  isAdLoading,
-}: {
-  visible: boolean;
-  onClose: () => void;
-  adsWatchedCount: number;
-  onWatchAd: () => void;
-  onUpgrade: () => void;
-  isAdLoading: boolean;
-}) => (
-  <Modal
-    animationType="fade"
-    transparent={true}
-    visible={visible}
-    onRequestClose={onClose}
-  >
-    <View style={accessModalStyles.overlay}>
-      <View style={accessModalStyles.modalContainer}>
-        <LinearGradient
-          colors={Colors.gradients.etherealSunset as any}
-          style={accessModalStyles.modalGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <View style={accessModalStyles.modalHeader}>
-            <Zap size={36} color="white" style={{ marginBottom: 12 }} />
-            <Text style={accessModalStyles.modalTitle}>Unlock AI Dream Analysis</Text>
-            <Text style={accessModalStyles.modalSubtitle}>
-              Watch a few short video ads or upgrade to an ad-free subscription for unlimited access.
-            </Text>
-          </View>
-          
-          <View style={accessModalStyles.counterContainer}>
-            <Text style={accessModalStyles.counterText}>
-              Ads Watched: <Text style={accessModalStyles.counterNumber}>{adsWatchedCount}</Text> / 2
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            style={accessModalStyles.watchAdButton}
-            onPress={onWatchAd}
-            disabled={isAdLoading || adsWatchedCount >= 2}
-          >
-            {isAdLoading ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <View style={accessModalStyles.buttonContent}>
-                <Play size={20} color="white" />
-                <Text style={accessModalStyles.watchAdButtonText}>
-                  Watch Video Ad ({2 - adsWatchedCount} left)
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
-
-          <View style={accessModalStyles.divider} />
-
-          <TouchableOpacity
-            style={accessModalStyles.upgradeButton}
-            onPress={onUpgrade}
-          >
-            <View style={accessModalStyles.buttonContent}>
-              <PremiumStar size={20} color="#3B82F6" />
-              <Text style={accessModalStyles.upgradeButtonText}>Upgrade to Subscription</Text>
-            </View>
-          </TouchableOpacity>
-        </LinearGradient>
-      </View>
-    </View>
-  </Modal>
-);
+// Paywall removed
 
 export default function DreamInterpretationScreen() {
   const { user } = useAuth();
-  const { isSubscribed } = useSubscription(); // Use the real subscription status
+  const isSubscribed = false; // Subscriptions are disabled
 
   // State for dreams and selected dream
   const [dreams, setDreams] = useState<DreamEntry[]>([]);
@@ -148,16 +60,25 @@ export default function DreamInterpretationScreen() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [loadingDreams, setLoadingDreams] = useState(true);
 
-  // State for ad-based access
-  const [adsWatchedCount, setAdsWatchedCount] = useState(0);
-  const [showPaywall, setShowPaywall] = useState(false);
-  const [isAdLoading, setIsAdLoading] = useState(false);
+  // Paywall removed: no ad gating state
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  const handleSafeBack = useCallback(() => {
+    try {
+      if (router.canGoBack?.()) {
+        router.back();
+      } else {
+        router.replace('/');
+      }
+    } catch (e) {
+      router.replace('/');
+    }
+  }, []);
 
   const moods = [
     { id: 'peaceful', label: 'Peaceful', emoji: '😌', color: '#10B981', gradient: ['#10B981', '#34D399'] },
@@ -209,67 +130,16 @@ export default function DreamInterpretationScreen() {
     }
   }, [user]);
 
-  // Load dreams on initial mount and check access
+  // Load dreams on initial mount
   useEffect(() => {
     if (user?.uid) {
       loadDreams();
     } else {
       setLoadingDreams(false);
     }
+  }, [user, loadDreams, isSubscribed]);
 
-    if (!isSubscribed) {
-      if (adsWatchedCount < 2) {
-        setShowPaywall(true);
-      } else {
-        setShowPaywall(false);
-      }
-    } else {
-      setShowPaywall(false);
-    }
-
-  }, [user, loadDreams, isSubscribed, adsWatchedCount]);
-
-  const handleWatchAd = async () => {
-    if (adsWatchedCount < 2) {
-      setIsAdLoading(true);
-      try {
-        const result = await rewardedAdService.showAd();
-        if (result.success) {
-          setAdsWatchedCount(prev => prev + 1);
-          Alert.alert('Video Ad Watched!', 'You\'re one step closer to unlocking the analysis.', [{ text: 'OK' }]);
-        } else {
-          Alert.alert('Ad Error', 'Failed to load the ad. Please try again.', [{ text: 'OK' }]);
-        }
-      } catch (error) {
-        console.error('Error showing rewarded ad:', error);
-        Alert.alert('Ad Error', 'Failed to load the ad. Please try again.', [{ text: 'OK' }]);
-      } finally {
-        setIsAdLoading(false);
-      }
-    }
-  };
-
-  const handleUpgradeSubscription = async () => {
-    try {
-      const offerings = await Purchases.getOfferings();
-      if (offerings.current) {
-        const packageToPurchase = offerings.current.monthly || offerings.current.weekly;
-        if (packageToPurchase) {
-          Alert.alert('Redirecting to Payment', 'Please complete your purchase to unlock dream analysis.', [{ text: 'OK' }]);
-          await Purchases.purchasePackage(packageToPurchase);
-        } else {
-          Alert.alert('Error', 'No subscription package found. Please try again later.');
-        }
-      } else {
-        Alert.alert('Error', 'Could not fetch subscription offerings.');
-      }
-    } catch (e: any) {
-      if (!e.userCancelled) {
-        Alert.alert('Purchase Failed', e.message || 'An error occurred during the purchase.');
-        console.error('❌ Purchase error:', e);
-      }
-    }
-  };
+  // Paywall removed: no ad handlers
 
   const handleAddDream = useCallback(async () => {
     if (!dreamTitle.trim() || !dreamDescription.trim()) {
@@ -279,12 +149,6 @@ export default function DreamInterpretationScreen() {
 
     if (!user?.uid) {
       Alert.alert('Authentication Error', 'Please log in to add dreams.');
-      return;
-    }
-
-    // Check for subscription before allowing AI analysis
-    if (!isSubscribed && adsWatchedCount < 2) {
-      setShowPaywall(true);
       return;
     }
 
@@ -323,7 +187,7 @@ export default function DreamInterpretationScreen() {
     } finally {
       setIsAnalyzing(false);
     }
-  }, [dreamTitle, dreamDescription, dreamMood, user, isSubscribed, adsWatchedCount]);
+  }, [dreamTitle, dreamDescription, dreamMood, user]);
 
   const handleDeleteDream = useCallback(async (dreamId: string) => {
     try {
@@ -491,7 +355,7 @@ export default function DreamInterpretationScreen() {
           style={styles.modalContainer}
         >
           <LinearGradient
-            colors={Colors.gradients.etherealSunset as any}
+            colors={Colors.gradients.spiritualLight as any}
             style={styles.modalGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -644,19 +508,6 @@ export default function DreamInterpretationScreen() {
     </Modal>
   );
 
-  if (!isSubscribed && adsWatchedCount < 2) {
-    return (
-      <AccessModal
-        visible={showPaywall}
-        onClose={() => {}}
-        adsWatchedCount={adsWatchedCount}
-        onWatchAd={handleWatchAd}
-        onUpgrade={handleUpgradeSubscription}
-        isAdLoading={isAdLoading}
-      />
-    );
-  }
-
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -669,7 +520,7 @@ export default function DreamInterpretationScreen() {
           title="Dream Interpretation"
           subtitle={`${dreams.length} dreams recorded • AI-powered insights`}
           showBackButton={true}
-          onBackPress={() => router.back()}
+          onBackPress={handleSafeBack}
           gradientColors={Colors.gradients.spiritualLight}
         />
         
@@ -808,7 +659,7 @@ export default function DreamInterpretationScreen() {
                     styles.saveButton,
                     (!dreamTitle.trim() || !dreamDescription.trim()) && styles.saveButtonDisabled,
                     isAnalyzing && styles.saveButtonAnalyzing,
-                    (!dreamTitle.trim() || !dreamDescription.trim() || (!isSubscribed && adsWatchedCount < 2)) ? null : styles.saveButtonGlow
+                    (!dreamTitle.trim() || !dreamDescription.trim()) ? null : styles.saveButtonGlow
                   ]} 
                   onPress={handleAddDream}
                   disabled={isAnalyzing || (!dreamTitle.trim() || !dreamDescription.trim())}
@@ -816,7 +667,7 @@ export default function DreamInterpretationScreen() {
                   <LinearGradient
                     colors={isAnalyzing 
                       ? ['#F59E0B', '#D97706'] 
-                      : (!dreamTitle.trim() || !dreamDescription.trim() || (!isSubscribed && adsWatchedCount < 2)) 
+                      : (!dreamTitle.trim() || !dreamDescription.trim())
                         ? ['rgba(255, 255, 255, 0.1)', 'rgba(255, 255, 255, 0.05)']
                         : ['#667eea', '#764ba2']
                     }
@@ -828,16 +679,13 @@ export default function DreamInterpretationScreen() {
                       {isAnalyzing ? (
                         <ActivityIndicator size="small" color="white" />
                       ) : (
-                        <Sparkles size={20} color={(!dreamTitle.trim() || !dreamDescription.trim() || (!isSubscribed && adsWatchedCount < 2)) ? 'rgba(255, 255, 255, 0.5)' : 'white'} />
+                        <Sparkles size={20} color={(!dreamTitle.trim() || !dreamDescription.trim()) ? 'rgba(255, 255, 255, 0.5)' : 'white'} />
                       )}
                       <Text style={[
                         styles.saveButtonText,
                         (!dreamTitle.trim() || !dreamDescription.trim()) && styles.saveButtonTextDisabled,
-                        (!isSubscribed && adsWatchedCount < 2) && styles.saveButtonTextDisabled,
                       ]}>
-                        {isAnalyzing ? 'AI Analysis in Progress...' : 
-                          (isSubscribed || adsWatchedCount >= 2) ? 'Analyze with AI' : 'Unlock AI Analysis'
-                        }
+                        {isAnalyzing ? 'AI Analysis in Progress...' : 'Analyze with AI'}
                       </Text>
                     </View>
                   </LinearGradient>

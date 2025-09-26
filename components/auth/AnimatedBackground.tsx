@@ -193,15 +193,15 @@ export default function AnimatedBackground({ variant = 'login', children }: Anim
 
   const getGradientColors = () => {
     const loginGradients = [
-      Colors.gradients.etherealSunset,
+      Colors.gradients.sunset,
       Colors.gradients.divineMorning,
       Colors.gradients.spiritualLight,
     ];
     
     const signupGradients = [
-      Colors.gradients.celestialDream,
-      Colors.gradients.sacredGarden,
-      Colors.gradients.goldenHour,
+      Colors.gradients.nature,
+      Colors.gradients.forest,
+      Colors.gradients.dawn,
     ];
 
     return variant === 'login' ? loginGradients : signupGradients;

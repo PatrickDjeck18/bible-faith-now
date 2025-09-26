@@ -12,7 +12,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { Mail, Eye, EyeOff, Lock, ArrowRight } from 'lucide-react-native';
+import { Mail, Eye, EyeOff, Lock, ArrowRight, User } from 'lucide-react-native';
 import { Colors, Typography, Spacing, BorderRadius } from '@/constants/DesignTokens';
 import { router } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
@@ -26,13 +26,16 @@ import SocialLoginButton from '@/components/auth/SocialLoginButton';
 const { width, height } = Dimensions.get('window');
 
 export default function LoginScreen() {
-  const { signInWithEmail, signInWithGoogle } = useAuth();
+  const { signInWithEmail, signInAsGuest } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const isEmailValid = email.length > 0 && !emailError;
+  const isPasswordValid = password.length >= 6 && !passwordError;
+  const isFormValid = isEmailValid && isPasswordValid;
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -76,27 +79,21 @@ export default function LoginScreen() {
   };
 
   const handleSignIn = async () => {
-    const isEmailValid = validateEmail(email);
-    const isPasswordValid = validatePassword(password);
-
-    if (!isEmailValid || !isPasswordValid) {
-      return;
-    }
+    const emailOk = validateEmail(email);
+    const passOk = validatePassword(password);
+    if (!emailOk || !passOk) return;
 
     try {
       setLoading(true);
       const { data, error } = await signInWithEmail(email.trim(), password);
       
       if (error) {
-        if (error.message?.includes('Invalid login credentials')) {
-          Alert.alert('Invalid Credentials', 'Please check your email and password and try again.');
-        } else if (error.message?.includes('Network connection failed')) {
-          Alert.alert('Connection Error', 'Unable to connect to the server. Please check your internet connection and try again.');
-        } else {
-          Alert.alert('Sign In Error', error.message || 'Failed to sign in. Please try again.');
-        }
+        // Use the improved error handling from authErrors
+        Alert.alert('Sign In Error', error.userFriendlyMessage || error.message || 'Failed to sign in. Please try again.');
       } else if (data?.user) {
         console.log('Sign in successful, user:', data.user.uid);
+        // Redirect to main app after successful sign-in
+        router.replace('/(tabs)');
       }
     } catch (error) {
       console.error('Sign in error:', error);
@@ -110,44 +107,28 @@ export default function LoginScreen() {
     router.push('/signup');
   };
 
-  const handleSocialLogin = async (provider: string) => {
-    if (provider === 'google') {
-      try {
-        setLoading(true);
-        console.log('🔴 Starting Google Sign-In process...');
-        
-        const { data, error } = await signInWithGoogle();
-        
-        if (error) {
-          console.error('🔴 Google Sign-In error:', error);
-          if (error.code === 'cancelled') {
-            // Don't show alert for user cancellation
-            console.log('🔴 Google Sign-In was cancelled by user');
-          } else if (error.code === 'redirect') {
-            // Don't show alert for redirect, it's expected
-            console.log('🔴 Redirecting to Google Sign-In...');
-          } else {
-            Alert.alert(
-              'Google Sign-In Error', 
-              error.message || 'Failed to sign in with Google. Please try again.'
-            );
-          }
-        } else if (data && 'user' in data && data.user) {
-          console.log('🔴 Google sign in successful, user:', data.user?.uid);
-          // User will be automatically redirected by the auth state change
-        }
-      } catch (error) {
-        console.error('🔴 Google sign in error:', error);
-        Alert.alert(
-          'Connection Error', 
-          'Unable to connect to the server. Please check your internet connection and try again.'
-        );
-      } finally {
-        setLoading(false);
+  const handleGuestLogin = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await signInAsGuest();
+      
+      if (error) {
+        Alert.alert('Guest Login Error', error.userFriendlyMessage || error.message || 'Failed to login as guest. Please try again.');
+      } else if (data?.user) {
+        console.log('Guest login successful, user:', data.user.uid);
+        // Redirect to main app after successful guest login
+        router.replace('/(tabs)');
       }
-    } else {
-      Alert.alert('Coming Soon', `${provider} login will be available soon!`);
+    } catch (error) {
+      console.error('Guest login error:', error);
+      Alert.alert('Connection Error', 'Unable to connect to the server. Please check your internet connection and try again.');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handleSocialLogin = async (provider: string) => {
+    Alert.alert('Coming Soon', `${provider} login will be available soon!`);
   };
 
   return (
@@ -163,6 +144,8 @@ export default function LoginScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          contentInsetAdjustmentBehavior="automatic"
         >
           {/* Hero Section */}
           <View style={styles.heroSection}>
@@ -189,6 +172,8 @@ export default function LoginScreen() {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
+                autoComplete="email"
+                returnKeyType="next"
                 error={emailError}
                 icon={<Mail size={20} color={Colors.neutral[600]} />}
               />
@@ -201,6 +186,9 @@ export default function LoginScreen() {
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
                 autoCorrect={false}
+                autoComplete="password"
+                returnKeyType="go"
+                onSubmitEditing={handleSignIn}
                 error={passwordError}
                 icon={<Lock size={20} color={Colors.neutral[600]} />}
                 rightIcon={
@@ -218,8 +206,19 @@ export default function LoginScreen() {
                   title="Sign In"
                   onPress={handleSignIn}
                   loading={loading}
+                  disabled={!isFormValid || loading}
                   rightIcon={<ArrowRight size={20} color="white" />}
                   style={styles.signInButton}
+                />
+
+                {/* Guest Login Button */}
+                <ModernButton
+                  title="Continue as Guest"
+                  onPress={handleGuestLogin}
+                  loading={loading}
+                  variant="outline"
+                  icon={<User size={20} color={Colors.primary[600]} />}
+                  style={styles.guestButton}
                 />
 
                 {/* Divider */}
@@ -231,16 +230,13 @@ export default function LoginScreen() {
 
                 {/* Social Login Buttons */}
                 <View style={styles.socialContainer}>
-                  <SocialLoginButton
-                    provider="google"
-                    onPress={() => handleSocialLogin('google')}
-                  />
+                  {/* Social login buttons removed */}
                  </View>
 
                 {/* Sign Up Link */}
                 <View style={styles.signUpContainer}>
                   <Text style={styles.signUpText}>Don't have an account? </Text>
-                  <TouchableOpacity onPress={handleSignUp}>
+                  <TouchableOpacity onPress={handleSignUp} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                     <Text style={styles.signUpLink}>Create Account</Text>
                   </TouchableOpacity>
                 </View>
@@ -323,6 +319,9 @@ const styles = StyleSheet.create({
     lineHeight: Typography.sizes.base * 1.5,
   },
   signInButton: {
+    marginBottom: Spacing.md,
+  },
+  guestButton: {
     marginBottom: Spacing.lg,
   },
   

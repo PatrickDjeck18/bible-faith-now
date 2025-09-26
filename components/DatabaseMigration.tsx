@@ -44,7 +44,7 @@ export default function DatabaseMigration() {
 
     Alert.alert(
       'Start Migration',
-      'This will migrate all your data from Supabase to Firebase Firestore. This process cannot be undone. Continue?',
+      'This will migrate all your data from Firebase Firestore to Supabase. This process cannot be undone. Continue?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -100,9 +100,9 @@ export default function DatabaseMigration() {
       const testId = await DatabaseService.createMoodEntry(testData as any);
       await DatabaseService.deleteMoodEntry(testId);
       
-      Alert.alert('Success', 'Firebase connection is working correctly!');
+      Alert.alert('Success', 'Supabase connection is working correctly!');
     } catch (error) {
-      Alert.alert('Error', `Firebase connection test failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      Alert.alert('Error', `Supabase connection test failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -134,7 +134,7 @@ export default function DatabaseMigration() {
       <View style={styles.header}>
         <Text style={styles.title}>Database Migration</Text>
         <Text style={styles.subtitle}>
-          Migrate your data from Supabase to Firebase Firestore
+          Migrate your data from Firebase Firestore to Supabase
         </Text>
       </View>
 
@@ -193,7 +193,7 @@ export default function DatabaseMigration() {
           style={[styles.button, styles.testButton]}
           onPress={testFirebaseConnection}
         >
-          <Text style={styles.buttonText}>Test Firebase Connection</Text>
+          <Text style={styles.buttonText}>Test Supabase Connection</Text>
         </TouchableOpacity>
       </View>
 
@@ -226,13 +226,13 @@ export default function DatabaseMigration() {
       <View style={styles.infoSection}>
         <Text style={styles.sectionTitle}>Important Information</Text>
         <Text style={styles.infoText}>
-          • This migration will copy all your data from Supabase to Firebase Firestore
+          • This migration will copy all your data from Firebase Firestore to Supabase
         </Text>
         <Text style={styles.infoText}>
           • Your original data in Supabase will remain unchanged
         </Text>
         <Text style={styles.infoText}>
-          • After successful migration, you can switch to using Firebase exclusively
+          • After successful migration, you can switch to using Supabase exclusively
         </Text>
         <Text style={styles.infoText}>
           • Make sure you have a stable internet connection during migration

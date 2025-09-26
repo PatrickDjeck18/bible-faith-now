@@ -19,7 +19,6 @@ import { Colors, Shadows, BorderRadius, Spacing, Typography } from '@/constants/
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { ModernHeader } from '@/components/ModernHeader';
 import BannerAd from '@/components/BannerAd';
-import SubscriptionCard from '@/components/SubscriptionCard';
 import {
   BookOpen,
   ArrowRight,
@@ -101,12 +100,7 @@ export default function HomeScreen() {
   const { showInterstitialAd } = useInterstitialAds('home');
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [moodStats, setMoodStats] = useState({
-    todaysMood: null as MoodEntry | null,
-    weeklyData: [],
-  });
   const [activePrayers, setActivePrayers] = useState<any[]>([]);
-  
   const [loading, setLoading] = useState(true); // State for all data fetching on this screen
   const [verseLoading, setVerseLoading] = useState(true);
   const [dailyVerse, setDailyVerse] = useState<{ reference: string, text: string } | null>(null);
@@ -135,30 +129,7 @@ export default function HomeScreen() {
         setProfile(null);
       }
 
-      // Fetch today's mood
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-
-      const moodEntriesCollectionRef = collection(db, 'moodEntries');
-      const moodQuery = query(
-        moodEntriesCollectionRef,
-        where('user_id', '==', user.uid),
-        where('created_at', '>=', today),
-        where('created_at', '<', tomorrow),
-        limit(1)
-      );
-      const moodSnapshot = await getDocs(moodQuery);
-      
-      if (!moodSnapshot.empty) {
-        setMoodStats(prev => ({
-          ...prev,
-          todaysMood: moodSnapshot.docs[0].data() as MoodEntry,
-        }));
-      } else {
-        setMoodStats(prev => ({ ...prev, todaysMood: null }));
-      }
+      // Remove direct mood fetching logic
       
       
 
@@ -417,24 +388,17 @@ export default function HomeScreen() {
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                   >
-                    <View style={[styles.actionIcon, { backgroundColor: Colors.primary[50] }]}>
-                      {React.createElement(action.icon, { size: 24, color: Colors.primary[600] })}
+                    <View style={[styles.actionIcon, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }] }>
+                      {React.createElement(action.icon, { size: 24, color: 'white' })}
                     </View>
-                    <Text style={[styles.actionTitle, { color: Colors.neutral[900] }]}>{action.title}</Text>
-                    <Text style={[styles.actionSubtitle, { color: Colors.neutral[600] }]}>{action.subtitle}</Text>
+                    <Text style={[styles.actionTitle, { color: 'white' }]}>{action.title}</Text>
+                    <Text style={[styles.actionSubtitle, { color: 'rgba(255, 255, 255, 0.85)' }]}>{action.subtitle}</Text>
                   </LinearGradient>
                 </Animated.View>
               </TouchableOpacity>
             ))}
           </View>
 
-          {/* Subscription Card */}
-          <SubscriptionCard onPurchaseSuccess={() => {
-            // Refresh the page to hide ads immediately
-            fetchAllData();
-          }} />
-
-          
         </Animated.ScrollView>
       </BackgroundGradient>
     </View>

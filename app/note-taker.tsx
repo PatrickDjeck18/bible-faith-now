@@ -38,6 +38,7 @@ import { HeaderCard } from '@/components/HeaderCard';
 import { useAuth } from '@/hooks/useAuth';
 import { useNotes, Note } from '@/hooks/useNotes'; // Import the correct Note type from your hook
 import { Timestamp } from 'firebase/firestore';
+import AuthGuard from '@/components/auth/AuthGuard';
 
 const { width, height } = Dimensions.get('window');
 
@@ -346,10 +347,14 @@ export default function NoteTakerScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="transparent" />
-      
-      <BackgroundGradient>
+    <AuthGuard
+      message="Sign in to save and organize your spiritual notes. Your insights will be securely stored and accessible across all your devices."
+      showGuestWarning={true}
+    >
+      <View style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="transparent" />
+        
+        <BackgroundGradient>
         {/* Header */}
         <HeaderCard
           title="Notes"
@@ -425,59 +430,69 @@ export default function NoteTakerScreen() {
           />
         )}
 
-        {/* Note Modal */}
+        {/* Note Modal - Mobile Optimized */}
         <Modal
           visible={showNoteModal}
           animationType="slide"
-          presentationStyle="pageSheet"
+          transparent={true}
+          statusBarTranslucent={true}
           onRequestClose={closeModal}
-          statusBarTranslucent={false}
         >
-          <LinearGradient
-            colors={['#fdfcfb', '#e2d1c3', '#c9d6ff']}
-            style={styles.modalContainer}
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={styles.modalOverlay}
           >
-            <StatusBar barStyle="dark-content" backgroundColor="transparent" />
-            <SafeAreaView style={styles.modalSafeArea}>
-              <View style={styles.modalHeader}>
-                <TouchableOpacity
-                  style={styles.modalCloseButton}
-                  onPress={closeModal}
-                >
-                  <ArrowLeft size={24} color={Colors.neutral[700]} />
-                </TouchableOpacity>
-
-                <Text style={styles.modalTitle}>
-                  {isEditing ? 'Edit Note' : 'View Note'}
-                </Text>
-
-                {isEditing ? (
-                  <TouchableOpacity
-                    style={styles.saveButton}
-                    onPress={saveCurrentNote}
-                  >
-                    <Save size={20} color="white" />
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity
-                    style={styles.editButton}
-                    onPress={editNote}
-                  >
-                    <Edit3 size={20} color={Colors.primary[600]} />
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={[styles.modalContent, {
-                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                  overflow: 'hidden',
-                }]}
-                key={isEditing ? 'editing' : 'viewing'}
+            <TouchableOpacity
+              style={styles.modalOverlayTouchable}
+              activeOpacity={1}
+              onPress={closeModal}
+            >
+              <TouchableOpacity
+                style={styles.modalContainer}
+                activeOpacity={1}
+                onPress={(e) => e.stopPropagation()}
               >
-                {isEditing ? (
-                  <>
+                <LinearGradient
+                  colors={['#fdfcfb', '#e2d1c3', '#c9d6ff']}
+                  style={StyleSheet.absoluteFillObject}
+                />
+                
+                <View style={styles.modalHeader}>
+                  <TouchableOpacity
+                    style={styles.modalCloseButton}
+                    onPress={closeModal}
+                  >
+                    <ArrowLeft size={24} color={Colors.neutral[700]} />
+                  </TouchableOpacity>
+
+                  <Text style={styles.modalTitle}>
+                    {isEditing ? 'Edit Note' : 'View Note'}
+                  </Text>
+
+                  {isEditing ? (
+                    <TouchableOpacity
+                      style={styles.saveButton}
+                      onPress={saveCurrentNote}
+                    >
+                      <Save size={20} color="white" />
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.editButton}
+                      onPress={editNote}
+                    >
+                      <Edit3 size={20} color={Colors.primary[600]} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                <ScrollView
+                  style={styles.modalContent}
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  {isEditing ? (
+                    <>
                     <TextInput
                       ref={titleInputRef}
                       style={styles.titleInput}
@@ -549,11 +564,12 @@ export default function NoteTakerScreen() {
                         </Text>
                       )}
                     </View>
-                  </>
-                )}
-              </KeyboardAvoidingView>
-            </SafeAreaView>
-          </LinearGradient>
+                    </>
+                  )}
+                </ScrollView>
+              </TouchableOpacity>
+            </TouchableOpacity>
+          </KeyboardAvoidingView>
         </Modal>
 
         {/* Delete Confirmation Modal */}
@@ -591,9 +607,10 @@ export default function NoteTakerScreen() {
               </View>
             </View>
           </View>
-        </Modal>
-      </BackgroundGradient>
-    </View>
+          </Modal>
+        </BackgroundGradient>
+      </View>
+    </AuthGuard>
   );
 }
 
@@ -800,10 +817,23 @@ const styles = StyleSheet.create({
     color: 'white',
   },
 
-  // Modal
-  modalContainer: {
+  // Modal - Mobile Optimized
+  modalOverlay: {
     flex: 1,
-    backgroundColor: 'transparent',
+    justifyContent: 'flex-end',
+  },
+  modalOverlayTouchable: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '90%',
+    marginTop: Platform.OS === 'ios' ? 40 : 0,
+    overflow: 'hidden',
   },
   modalSafeArea: {
     flex: 1,
@@ -850,7 +880,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   modalContent: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
     paddingBottom: Spacing.lg,

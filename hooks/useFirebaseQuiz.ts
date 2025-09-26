@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { QUIZ_QUESTIONS, QuizQuestion, QuizCategory, getRandomQuestions, getQuestionsForLevel, DIFFICULTY_LEVELS, LevelConfig, getCurrentLevel, getNextLevel, getProgressToNextLevel, LEVEL_SYSTEM } from '@/constants/QuizQuestions';
-import { FirestoreService, COLLECTIONS } from '@/lib/firestore';
+import { COLLECTIONS } from '@/lib/firestore';
+import { SupabaseService } from '@/lib/services/supabaseService';
 import { auth } from '@/lib/firebase';
 
 export interface QuizState {
@@ -114,7 +115,7 @@ export const useFirebaseQuiz = () => {
     try {
       if (!user) return;
 
-      const userStats = await FirestoreService.getById(
+      const userStats = await SupabaseService.getById(
         COLLECTIONS.USER_QUIZ_STATS,
         user.uid
       );
@@ -211,9 +212,11 @@ export const useFirebaseQuiz = () => {
 
   // Answer a question
   const answerQuestion = useCallback((answerIndex: number) => {
-    if (!quizState.isActive || quizState.selectedAnswer !== null) return;
+    if (!quizState.isActive || quizState.selectedAnswer !== null || quizState.isCompleted) return;
 
     const currentQuestion = quizState.questions[quizState.currentQuestionIndex];
+    if (!currentQuestion) return;
+
     const isCorrect = answerIndex === currentQuestion.correctAnswer;
     
     // Calculate points based on difficulty and time
@@ -243,7 +246,7 @@ export const useFirebaseQuiz = () => {
   const nextQuestion = useCallback(() => {
     setQuizState(prev => {
       const nextIndex = prev.currentQuestionIndex + 1;
-      const isLastQuestion = nextIndex >= prev.questions.length;
+      const isLastQuestion = nextIndex >= prev.totalQuestions;
 
       if (isLastQuestion) {
         // Quiz completed
@@ -289,10 +292,10 @@ export const useFirebaseQuiz = () => {
       };
 
       // Save quiz session
-      await FirestoreService.create(COLLECTIONS.QUIZ_SESSIONS, sessionData);
+      await SupabaseService.create(COLLECTIONS.QUIZ_SESSIONS, sessionData);
 
       // Get current user stats
-      const userStats = await FirestoreService.getById(
+      const userStats = await SupabaseService.getById(
         COLLECTIONS.USER_QUIZ_STATS,
         user.uid
       );
@@ -346,9 +349,9 @@ export const useFirebaseQuiz = () => {
 
       // Save updated stats
       if (userStats) {
-        await FirestoreService.update(COLLECTIONS.USER_QUIZ_STATS, user.uid, updatedStats);
+        await SupabaseService.update(COLLECTIONS.USER_QUIZ_STATS, user.uid, updatedStats);
       } else {
-        await FirestoreService.create(COLLECTIONS.USER_QUIZ_STATS, {
+        await SupabaseService.create(COLLECTIONS.USER_QUIZ_STATS, {
           userId: user.uid,
           ...updatedStats
         });
@@ -378,11 +381,11 @@ export const useFirebaseQuiz = () => {
 
   // Get current question
   const getCurrentQuestion = useCallback(() => {
-    if (quizState.questions.length === 0 || quizState.currentQuestionIndex >= quizState.questions.length) {
+    if (quizState.questions.length === 0 || quizState.currentQuestionIndex >= quizState.totalQuestions) {
       return null;
     }
     return quizState.questions[quizState.currentQuestionIndex];
-  }, [quizState.questions, quizState.currentQuestionIndex]);
+  }, [quizState.questions, quizState.currentQuestionIndex, quizState.totalQuestions]);
 
   // Get progress
   const getProgress = useCallback(() => {

@@ -8,6 +8,8 @@ const STORAGE_KEYS = {
   BOOKMARKS: 'bible_bookmarks',
   READING_PROGRESS: 'bible_reading_progress',
   RECENT_CHAPTERS: 'bible_recent_chapters',
+  OFFLINE_BOOKS: 'bible_offline_books', // Store books for offline access
+  OFFLINE_CHAPTERS: 'bible_offline_chapters', // Store chapters for offline access
 };
 
 // Local storage helper functions using AsyncStorage
@@ -157,6 +159,9 @@ export function useBibleAPI() {
       content: string;
       timestamp: number;
       bibleId: string;
+      bookId: string;
+      chapterNumber: number;
+      reference: string;
     };
   }>({});
   const [recentChapters, setRecentChapters] = useState<Array<{
@@ -174,10 +179,19 @@ export function useBibleAPI() {
       const storedProgress = await getFromStorage(STORAGE_KEYS.READING_PROGRESS);
       const storedCache = await getFromStorage(STORAGE_KEYS.CACHED_PASSAGES);
       const storedRecent = await getFromStorage(STORAGE_KEYS.RECENT_CHAPTERS);
+      const storedOfflineBooks = await getFromStorage(STORAGE_KEYS.OFFLINE_BOOKS);
+      const storedOfflineChapters = await getFromStorage(STORAGE_KEYS.OFFLINE_CHAPTERS);
+      
       if (storedBookmarks) setBookmarks(storedBookmarks);
       if (storedProgress) setReadingProgress(storedProgress);
       if (storedCache) setCachedPassages(storedCache);
       if (storedRecent) setRecentChapters(storedRecent);
+      
+      console.log('📖 Loaded offline data:', {
+        passages: Object.keys(storedCache || {}).length,
+        books: (storedOfflineBooks || []).length,
+        chapters: (storedOfflineChapters || []).length
+      });
     };
     
     loadStoredData();
@@ -653,13 +667,14 @@ export function useBibleAPI() {
       
       console.log('✅ Validated chapter number:', chapterNum);
       
-      // Check cache first
+      // Check cache first (offline-first strategy)
       const cacheKey = `${bibleId}-${passageId}`;
       const cachedPassage = cachedPassages[cacheKey];
       const now = Date.now();
       
-      // Use cached passage if it's less than 24 hours old
-      if (cachedPassage && (now - cachedPassage.timestamp) < 24 * 60 * 60 * 1000) {
+      // Use cached passage if available (extended to 30 days for offline access)
+      const cacheExpiry = 30 * 24 * 60 * 60 * 1000; // 30 days
+      if (cachedPassage && (now - cachedPassage.timestamp) < cacheExpiry) {
         console.log('📖 Using cached passage:', passageId);
         const passage: Passage = {
           id: passageId,
@@ -667,7 +682,7 @@ export function useBibleAPI() {
           bookId: bookId,
           chapterNumber: chapterNum,
           content: cachedPassage.content,
-          reference: `${bookId} ${chapterNum}`,
+          reference: cachedPassage.reference || `${bookId} ${chapterNum}`,
           verseCount: 0
         };
         setCurrentPassage(passage);
@@ -678,36 +693,73 @@ export function useBibleAPI() {
         // Add to recent chapters
         addToRecentChapters(bookId, chapterNum, bookId, bibleId);
         
-        return;
+        // If offline, we're done - don't try to fetch from API
+        if (!isOnline) {
+          console.log('📱 Offline mode - using cached data only');
+          return;
+        }
+        
+        // If online, continue to fetch fresh data in background
+        console.log('🌐 Online - fetching fresh data in background');
       }
       
-      // Fetch from API
-      console.log('🌐 Making API request for:', `${bookId}.${chapterNum}`);
-      const data = await makeAPIRequest(`/bibles/${bibleId}/passages/${bookId}.${chapterNum}`);
-      
-      // Transform the data to match our Passage interface
-      const passage: Passage = {
-        id: passageId,
-        translationId: bibleId,
-        bookId: bookId,
-        chapterNumber: chapterNum,
-        content: data.data?.content || '',
-        reference: data.data?.reference || `${bookId} ${chapterNum}`,
-        verseCount: data.data?.verseCount || 0
-      };
-      
-      setCurrentPassage(passage);
-      
-      // Cache the passage
-      const newCache = {
-        ...cachedPassages,
-        [cacheKey]: {
-          content: passage.content,
-          timestamp: now,
-          bibleId: bibleId
+      // If online, fetch from API (or if no cached data available)
+      if (isOnline) {
+        try {
+          console.log('🌐 Making API request for:', `${bookId}.${chapterNum}`);
+          const data = await makeAPIRequest(`/bibles/${bibleId}/passages/${bookId}.${chapterNum}`);
+          
+          // Transform the data to match our Passage interface
+          const passage: Passage = {
+            id: passageId,
+            translationId: bibleId,
+            bookId: bookId,
+            chapterNumber: chapterNum,
+            content: data.data?.content || '',
+            reference: data.data?.reference || `${bookId} ${chapterNum}`,
+            verseCount: data.data?.verseCount || 0
+          };
+          
+          setCurrentPassage(passage);
+          
+          // Cache the passage with enhanced metadata
+          const newCache = {
+            ...cachedPassages,
+            [cacheKey]: {
+              content: passage.content,
+              timestamp: now,
+              bibleId: bibleId,
+              bookId: bookId,
+              chapterNumber: chapterNum,
+              reference: passage.reference
+            }
+          };
+          setCachedPassages(newCache);
+          
+        } catch (apiError) {
+          // If API fails but we have cached data, use it
+          if (cachedPassage) {
+            console.log('⚠️ API failed, falling back to cached data');
+            const passage: Passage = {
+              id: passageId,
+              translationId: bibleId,
+              bookId: bookId,
+              chapterNumber: chapterNum,
+              content: cachedPassage.content,
+              reference: cachedPassage.reference || `${bookId} ${chapterNum}`,
+              verseCount: 0
+            };
+            setCurrentPassage(passage);
+          } else {
+            throw apiError; // Re-throw if no cached data available
+          }
         }
-      };
-      setCachedPassages(newCache);
+      } else {
+        // Offline mode - if no cached data, show error
+        if (!cachedPassage) {
+          throw new Error('You are offline and no cached data is available for this passage.');
+        }
+      }
       
       // Update reading progress
       updateReadingProgress(bookId, chapterNum, 1);
@@ -830,18 +882,179 @@ export function useBibleAPI() {
     return recentChapters.sort((a, b) => b.timestamp - a.timestamp);
   };
 
-  // Clear cache for old passages (older than 7 days)
+  // Enhanced cache management functions
+  const saveBookForOffline = async (book: Book, bibleId: string) => {
+    try {
+      const offlineBooks = await getFromStorage(STORAGE_KEYS.OFFLINE_BOOKS) || [];
+      const existingIndex = offlineBooks.findIndex((b: any) => b.id === book.id && b.bibleId === bibleId);
+      
+      if (existingIndex === -1) {
+        const bookWithMetadata = {
+          ...book,
+          bibleId,
+          savedAt: Date.now()
+        };
+        offlineBooks.push(bookWithMetadata);
+        await setToStorage(STORAGE_KEYS.OFFLINE_BOOKS, offlineBooks);
+        console.log('💾 Book saved for offline access:', book.name);
+      }
+    } catch (error) {
+      console.error('Error saving book for offline:', error);
+    }
+  };
+
+  const saveChapterForOffline = async (chapter: APIChapter, bibleId: string, bookId: string) => {
+    try {
+      const offlineChapters = await getFromStorage(STORAGE_KEYS.OFFLINE_CHAPTERS) || [];
+      const existingIndex = offlineChapters.findIndex((c: any) =>
+        c.id === chapter.id && c.bibleId === bibleId
+      );
+      
+      if (existingIndex === -1) {
+        const chapterWithMetadata = {
+          ...chapter,
+          bibleId,
+          bookId,
+          savedAt: Date.now()
+        };
+        offlineChapters.push(chapterWithMetadata);
+        await setToStorage(STORAGE_KEYS.OFFLINE_CHAPTERS, offlineChapters);
+        console.log('💾 Chapter saved for offline access:', `${bookId} ${chapter.chapterNumber}`);
+      }
+    } catch (error) {
+      console.error('Error saving chapter for offline:', error);
+    }
+  };
+
+  const getOfflineBooks = async (bibleId: string): Promise<Book[]> => {
+    try {
+      const offlineBooks = await getFromStorage(STORAGE_KEYS.OFFLINE_BOOKS) || [];
+      return offlineBooks.filter((book: any) => book.bibleId === bibleId);
+    } catch (error) {
+      console.error('Error getting offline books:', error);
+      return [];
+    }
+  };
+
+  const getOfflineChapters = async (bibleId: string, bookId: string): Promise<APIChapter[]> => {
+    try {
+      const offlineChapters = await getFromStorage(STORAGE_KEYS.OFFLINE_CHAPTERS) || [];
+      return offlineChapters.filter((chapter: any) =>
+        chapter.bibleId === bibleId && chapter.bookId === bookId
+      );
+    } catch (error) {
+      console.error('Error getting offline chapters:', error);
+      return [];
+    }
+  };
+
+  // Enhanced cache cleanup for offline access
   const clearOldCache = async () => {
     const now = Date.now();
-    const sevenDaysAgo = 7 * 24 * 60 * 60 * 1000;
+    const thirtyDaysAgo = 30 * 24 * 60 * 60 * 1000; // 30 days for passages
+    const ninetyDaysAgo = 90 * 24 * 60 * 60 * 1000; // 90 days for books/chapters
     
+    // Clear old passages
     const newCache = Object.fromEntries(
-      Object.entries(cachedPassages).filter(([_, passage]) => 
-        (now - passage.timestamp) < sevenDaysAgo
+      Object.entries(cachedPassages).filter(([_, passage]) =>
+        (now - passage.timestamp) < thirtyDaysAgo
       )
     );
-    
     setCachedPassages(newCache);
+    
+    // Clear old offline books and chapters
+    try {
+      const offlineBooks = await getFromStorage(STORAGE_KEYS.OFFLINE_BOOKS) || [];
+      const filteredBooks = offlineBooks.filter((book: any) =>
+        (now - book.savedAt) < ninetyDaysAgo
+      );
+      await setToStorage(STORAGE_KEYS.OFFLINE_BOOKS, filteredBooks);
+      
+      const offlineChapters = await getFromStorage(STORAGE_KEYS.OFFLINE_CHAPTERS) || [];
+      const filteredChapters = offlineChapters.filter((chapter: any) =>
+        (now - chapter.savedAt) < ninetyDaysAgo
+      );
+      await setToStorage(STORAGE_KEYS.OFFLINE_CHAPTERS, filteredChapters);
+      
+      console.log('🧹 Cache cleanup completed:', {
+        passages: Object.keys(newCache).length,
+        books: filteredBooks.length,
+        chapters: filteredChapters.length
+      });
+    } catch (error) {
+      console.error('Error during cache cleanup:', error);
+    }
+  };
+
+  // Enhanced fetchBooks with offline support
+  const fetchBooksWithOffline = async (bibleId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Check if we have offline books first
+      if (!isOnline) {
+        console.log('📱 Offline mode - using offline books');
+        const offlineBooks = await getOfflineBooks(bibleId);
+        if (offlineBooks.length > 0) {
+          setBooks(offlineBooks);
+          return;
+        }
+      }
+      
+      // Proceed with normal API call
+      await fetchBooks(bibleId);
+      
+      // Save books for offline access if online
+      if (isOnline) {
+        setTimeout(async () => {
+          const currentBooks = books;
+          for (const book of currentBooks) {
+            await saveBookForOffline(book, bibleId);
+          }
+        }, 1000);
+      }
+      
+    } catch (error) {
+      const apiError = error as APIError;
+      setError(apiError.message);
+      console.error('Error fetching books with offline support:', apiError);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Enhanced fetchChapters with offline support
+  const fetchChaptersWithOffline = async (bibleId: string, bookId: string) => {
+    try {
+      // Check if we have offline chapters first
+      if (!isOnline) {
+        console.log('📱 Offline mode - using offline chapters');
+        const offlineChapters = await getOfflineChapters(bibleId, bookId);
+        if (offlineChapters.length > 0) {
+          setChapters(offlineChapters);
+          return;
+        }
+      }
+      
+      // Proceed with normal API call
+      await fetchChapters(bibleId, bookId);
+      
+      // Save chapters for offline access if online
+      if (isOnline) {
+        setTimeout(async () => {
+          const currentChapters = chapters;
+          for (const chapter of currentChapters) {
+            await saveChapterForOffline(chapter, bibleId, bookId);
+          }
+        }, 1000);
+      }
+      
+    } catch (error) {
+      const apiError = error as APIError;
+      setError(apiError.message);
+      console.error('Error fetching chapters with offline support:', apiError);
+    }
   };
 
   const searchVerses = async (bibleId: string, query: string, limit: number = 20, filters?: {
@@ -1170,6 +1383,13 @@ export function useBibleAPI() {
     getReadingProgress,
     getOverallReadingProgress,
     getRecentChapters,
-    clearOldCache
+    clearOldCache,
+    // Offline functionality
+    saveBookForOffline,
+    saveChapterForOffline,
+    getOfflineBooks,
+    getOfflineChapters,
+    fetchBooksWithOffline,
+    fetchChaptersWithOffline
   };
 }

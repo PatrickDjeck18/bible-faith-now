@@ -20,6 +20,8 @@ export interface MoodAnalysis {
   trendPrediction: string;
 }
 
+import { config } from '../config';
+
 export interface MoodAnalysisRequest {
   moodHistory: MoodEntry[];
   currentMood?: string;
@@ -32,13 +34,11 @@ export interface MoodAnalysisRequest {
 }
 
 export class MoodAnalysisService {
-  private static readonly DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions';
-  private static readonly API_KEY = process.env.EXPO_PUBLIC_DEEPSEEK_API_KEY;
 
   static async analyzeMoodPatterns(request: MoodAnalysisRequest): Promise<MoodAnalysis> {
     try {
       // If no API key, return basic analysis
-      if (!this.API_KEY) {
+      if (!config.deepseek.apiKey) {
         return this.getBasicAnalysis(request);
       }
 
@@ -61,11 +61,11 @@ Guidelines:
 
       const userPrompt = this.buildUserPrompt(request);
 
-      const response = await fetch(this.DEEPSEEK_API_URL, {
+      const response = await fetch(config.deepseek.apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.API_KEY}`,
+          'Authorization': `Bearer ${config.deepseek.apiKey}`,
         },
         body: JSON.stringify({
           model: 'deepseek-chat',
@@ -222,7 +222,7 @@ Guidelines:
     weather?: string;
   }): Promise<string> {
     try {
-      if (!this.API_KEY) {
+      if (!config.deepseek.apiKey) {
         return 'Take a moment to breathe and connect with God. Consider reading a Psalm that matches your current mood.';
       }
 
@@ -234,11 +234,11 @@ Weather: ${currentContext.weather || 'unknown'}
 
 Provide a brief, practical, faith-based suggestion.`;
 
-      const response = await fetch(this.DEEPSEEK_API_URL, {
+      const response = await fetch(config.deepseek.apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.API_KEY}`,
+          'Authorization': `Bearer ${config.deepseek.apiKey}`,
         },
         body: JSON.stringify({
           model: 'deepseek-chat',

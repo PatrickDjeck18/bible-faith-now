@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Daily Bread",
-    "slug": "daily-bread",
+    "name": "Daily Faith",
+    "slug": "daily-faith",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "daily-bread",
+    "scheme": "daily-faith",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": false,
     "ios": {
@@ -25,7 +25,8 @@
       "firebaseMessagingSenderId": "354959331079",
       "firebaseAppId": "1:354959331079:android:7484ecb8076d9ee686ffa2",
       "firebaseDatabaseUrl": "https://daily-bread-88f42.firebaseio.com",
-      "googleClientId": "354959331079-faisqnjq2nd81nrhnikm2t0clfc49kle.apps.googleusercontent.com",
+      "supabaseUrl": "https://wpseewgauosvockglpdv.supabase.co",
+      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indwc2Vld2dhdW9zdm9ja2dscGR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg1NjkyNDksImV4cCI6MjA3NDE0NTI0OX0.Uunu2UFH49W-a1NhTp21E9OjPS1UBev8drfyXxWdIxU",
       "router": {},
       "eas": {
         "projectId": "bef64528-a022-46ea-8d92-de6ba1b001da"
@@ -34,19 +35,7 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-web-browser",
-      [
-        "@react-native-google-signin/google-signin",
-        {
-          "iosUrlScheme": "com.googleusercontent.apps.354959331079-faisqnjq2nd81nrhnikm2t0clfc49kle"
-        }
-      ],
-      [
-        "react-native-google-mobile-ads",
-        {
-          "androidAppId": "ca-app-pub-3940256099942544~3347511713"
-        }
-      ]
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

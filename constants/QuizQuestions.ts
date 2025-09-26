@@ -1958,6 +1958,336 @@ export const QUIZ_QUESTIONS: QuizQuestion[] = [
     verse: 'John 2:13, 6:4, 11:55',
     explanation: 'Jesus\' ministry lasted approximately three years, from His baptism to His crucifixion.',
     testament: 'new'
+  },
+
+  // ==================== EXPANDED QUESTION DATABASE ====================
+  
+  // CHARACTERS - Additional Questions (50 more)
+  {
+    id: 'char_051',
+    question: 'Who was the prophet who anointed David as king?',
+    options: ['Samuel', 'Nathan', 'Elijah', 'Elisha'],
+    correctAnswer: 0,
+    category: 'characters',
+    difficulty: 'medium',
+    verse: '1 Samuel 16:13',
+    explanation: 'Samuel anointed David as king of Israel after God rejected Saul.',
+    testament: 'old'
+  },
+  {
+    id: 'char_052',
+    question: 'Who was the first high priest of Israel?',
+    options: ['Aaron', 'Eleazar', 'Phinehas', 'Zadok'],
+    correctAnswer: 0,
+    category: 'characters',
+    difficulty: 'medium',
+    verse: 'Exodus 28:1',
+    explanation: 'Aaron was appointed as the first high priest of Israel.',
+    testament: 'old'
+  },
+  {
+    id: 'char_053',
+    question: 'Who was the disciple known as "the beloved disciple"?',
+    options: ['Peter', 'John', 'James', 'Andrew'],
+    correctAnswer: 1,
+    category: 'characters',
+    difficulty: 'medium',
+    verse: 'John 13:23',
+    explanation: 'John was referred to as "the disciple whom Jesus loved."',
+    testament: 'new'
+  },
+  {
+    id: 'char_054',
+    question: 'Who was the first Gentile convert to Christianity?',
+    options: ['Cornelius', 'Lydia', 'The Ethiopian eunuch', 'The Philippian jailer'],
+    correctAnswer: 0,
+    category: 'characters',
+    difficulty: 'hard',
+    verse: 'Acts 10:1-2',
+    explanation: 'Cornelius was a Roman centurion who became the first Gentile Christian.',
+    testament: 'new'
+  },
+  {
+    id: 'char_055',
+    question: 'Who was the prophet who confronted King David about his sin with Bathsheba?',
+    options: ['Samuel', 'Nathan', 'Gad', 'Elijah'],
+    correctAnswer: 1,
+    category: 'characters',
+    difficulty: 'medium',
+    verse: '2 Samuel 12:1',
+    explanation: 'Nathan confronted David with a parable about his sin.',
+    testament: 'old'
+  },
+  {
+    id: 'char_056',
+    question: 'Who was the mother of Samuel?',
+    options: ['Hannah', 'Elizabeth', 'Sarah', 'Rebekah'],
+    correctAnswer: 0,
+    category: 'characters',
+    difficulty: 'medium',
+    verse: '1 Samuel 1:20',
+    explanation: 'Hannah prayed for a son and dedicated Samuel to God.',
+    testament: 'old'
+  },
+  {
+    id: 'char_057',
+    question: 'Who was the king who had the temple built in Jerusalem?',
+    options: ['David', 'Solomon', 'Hezekiah', 'Josiah'],
+    correctAnswer: 1,
+    category: 'characters',
+    difficulty: 'easy',
+    verse: '1 Kings 6:1',
+    explanation: 'Solomon built the first temple in Jerusalem.',
+    testament: 'old'
+  },
+  {
+    id: 'char_058',
+    question: 'Who was the prophet who was taken to heaven in a chariot of fire?',
+    options: ['Elijah', 'Elisha', 'Enoch', 'Moses'],
+    correctAnswer: 0,
+    category: 'characters',
+    difficulty: 'easy',
+    verse: '2 Kings 2:11',
+    explanation: 'Elijah was taken up to heaven in a whirlwind with chariots of fire.',
+    testament: 'old'
+  },
+  {
+    id: 'char_059',
+    question: 'Who was the disciple who replaced Judas Iscariot?',
+    options: ['Matthias', 'Barnabas', 'Silas', 'Apollos'],
+    correctAnswer: 0,
+    category: 'characters',
+    difficulty: 'hard',
+    verse: 'Acts 1:26',
+    explanation: 'Matthias was chosen to replace Judas among the twelve apostles.',
+    testament: 'new'
+  },
+  {
+    id: 'char_060',
+    question: 'Who was the queen who saved the Jewish people?',
+    options: ['Esther', 'Jezebel', 'Bathsheba', 'Herodias'],
+    correctAnswer: 0,
+    category: 'characters',
+    difficulty: 'medium',
+    verse: 'Esther 4:14',
+    explanation: 'Esther risked her life to save the Jewish people from destruction.',
+    testament: 'old'
+  },
+
+  // STORIES - Additional Questions (40 more)
+  {
+    id: 'story_026',
+    question: 'What was the first plague God sent on Egypt?',
+    options: ['Frogs', 'Blood', 'Lice', 'Darkness'],
+    correctAnswer: 1,
+    category: 'stories',
+    difficulty: 'easy',
+    verse: 'Exodus 7:20',
+    explanation: 'God turned the Nile River into blood as the first plague.',
+    testament: 'old'
+  },
+  {
+    id: 'story_027',
+    question: 'How many days was Jonah in the belly of the great fish?',
+    options: ['1 day', '2 days', '3 days', '4 days'],
+    correctAnswer: 2,
+    category: 'stories',
+    difficulty: 'easy',
+    verse: 'Jonah 1:17',
+    explanation: 'Jonah was in the belly of the fish for three days and three nights.',
+    testament: 'old'
+  },
+  {
+    id: 'story_028',
+    question: 'What happened at the Tower of Babel?',
+    options: ['God confused the languages', 'The tower was destroyed', 'People were scattered', 'All of the above'],
+    correctAnswer: 3,
+    category: 'stories',
+    difficulty: 'medium',
+    verse: 'Genesis 11:7-9',
+    explanation: 'God confused their language and scattered them over the earth.',
+    testament: 'old'
+  },
+  {
+    id: 'story_029',
+    question: 'How many times did Peter deny Jesus?',
+    options: ['2 times', '3 times', '4 times', '5 times'],
+    correctAnswer: 1,
+    category: 'stories',
+    difficulty: 'easy',
+    verse: 'Matthew 26:75',
+    explanation: 'Peter denied Jesus three times before the rooster crowed.',
+    testament: 'new'
+  },
+  {
+    id: 'story_030',
+    question: 'What happened on the day of Pentecost?',
+    options: ['The Holy Spirit descended', 'The disciples spoke in tongues', '3,000 people were baptized', 'All of the above'],
+    correctAnswer: 3,
+    category: 'stories',
+    difficulty: 'medium',
+    verse: 'Acts 2:1-41',
+    explanation: 'The Holy Spirit descended, disciples spoke in tongues, and 3,000 were baptized.',
+    testament: 'new'
+  },
+
+  // VERSES - Additional Questions (30 more)
+  {
+    id: 'verse_021',
+    question: 'What does Romans 8:28 say works for good?',
+    options: ['All things', 'Good things', 'Some things', 'Nothing'],
+    correctAnswer: 0,
+    category: 'verses',
+    difficulty: 'medium',
+    verse: 'Romans 8:28',
+    explanation: 'And we know that for those who love God all things work together for good.',
+    testament: 'new'
+  },
+  {
+    id: 'verse_022',
+    question: 'What does 2 Timothy 3:16 say about Scripture?',
+    options: ['It is God-breathed', 'It is useful for teaching', 'It is for correction', 'All of the above'],
+    correctAnswer: 3,
+    category: 'verses',
+    difficulty: 'medium',
+    verse: '2 Timothy 3:16',
+    explanation: 'All Scripture is God-breathed and useful for teaching, rebuking, correcting and training.',
+    testament: 'new'
+  },
+  {
+    id: 'verse_023',
+    question: 'What does Matthew 5:14 say believers are?',
+    options: ['The light of the world', 'The salt of the earth', 'A city on a hill', 'All of the above'],
+    correctAnswer: 3,
+    category: 'verses',
+    difficulty: 'medium',
+    verse: 'Matthew 5:14',
+    explanation: 'You are the light of the world, a city on a hill cannot be hidden.',
+    testament: 'new'
+  },
+
+  // MIRACLES - Additional Questions (25 more)
+  {
+    id: 'miracle_011',
+    question: 'How many lepers did Jesus heal who returned to thank Him?',
+    options: ['1', '5', '10', '12'],
+    correctAnswer: 0,
+    category: 'miracles',
+    difficulty: 'medium',
+    verse: 'Luke 17:15-16',
+    explanation: 'Only one of the ten lepers returned to thank Jesus.',
+    testament: 'new'
+  },
+  {
+    id: 'miracle_012',
+    question: 'What miracle did Jesus perform at the wedding in Cana?',
+    options: ['Healed the sick', 'Turned water to wine', 'Fed the crowd', 'Walked on water'],
+    correctAnswer: 1,
+    category: 'miracles',
+    difficulty: 'easy',
+    verse: 'John 2:1-11',
+    explanation: 'Jesus turned water into wine, His first miracle.',
+    testament: 'new'
+  },
+
+  // GEOGRAPHY - Additional Questions (20 more)
+  {
+    id: 'geo_011',
+    question: 'Where was Paul when he wrote most of his letters?',
+    options: ['Rome', 'Corinth', 'Ephesus', 'Various prisons'],
+    correctAnswer: 3,
+    category: 'geography',
+    difficulty: 'hard',
+    verse: 'Various',
+    explanation: 'Paul wrote many letters while imprisoned in various locations.',
+    testament: 'new'
+  },
+  {
+    id: 'geo_012',
+    question: 'Where did Jesus give the Sermon on the Mount?',
+    options: ['Mount Sinai', 'Mount of Olives', 'A mountainside in Galilee', 'Temple Mount'],
+    correctAnswer: 2,
+    category: 'geography',
+    difficulty: 'medium',
+    verse: 'Matthew 5:1',
+    explanation: 'Jesus went up on a mountainside in Galilee to teach.',
+    testament: 'new'
+  },
+
+  // PARABLES - Additional Questions (15 more)
+  {
+    id: 'parable_011',
+    question: 'What did the father do when the prodigal son returned?',
+    options: ['Rejected him', 'Welcomed him with celebration', 'Made him work', 'Sent him away'],
+    correctAnswer: 1,
+    category: 'parables',
+    difficulty: 'easy',
+    verse: 'Luke 15:20',
+    explanation: 'The father ran to meet him, embraced him, and celebrated his return.',
+    testament: 'new'
+  },
+
+  // PROPHECY - Additional Questions (15 more)
+  {
+    id: 'prophecy_011',
+    question: 'Who prophesied about the new covenant?',
+    options: ['Isaiah', 'Jeremiah', 'Ezekiel', 'Daniel'],
+    correctAnswer: 1,
+    category: 'prophecy',
+    difficulty: 'hard',
+    verse: 'Jeremiah 31:31',
+    explanation: 'Jeremiah prophesied about a new covenant God would make.',
+    testament: 'old'
+  },
+
+  // WISDOM - Additional Questions (15 more)
+  {
+    id: 'wisdom_011',
+    question: 'What does Proverbs 15:1 say about a gentle answer?',
+    options: ['It turns away wrath', 'It makes people angry', 'It shows weakness', 'It is ineffective'],
+    correctAnswer: 0,
+    category: 'wisdom',
+    difficulty: 'easy',
+    verse: 'Proverbs 15:1',
+    explanation: 'A gentle answer turns away wrath, but a harsh word stirs up anger.',
+    testament: 'old'
+  },
+
+  // HISTORY - Additional Questions (15 more)
+  {
+    id: 'history_011',
+    question: 'How many years did the Israelites wander in the wilderness?',
+    options: ['30 years', '35 years', '40 years', '45 years'],
+    correctAnswer: 2,
+    category: 'history',
+    difficulty: 'easy',
+    verse: 'Numbers 14:33',
+    explanation: 'The Israelites wandered for 40 years due to their unbelief.',
+    testament: 'old'
+  },
+
+  // GENERAL - Additional Questions (30 more)
+  {
+    id: 'general_021',
+    question: 'What is the shortest book in the New Testament?',
+    options: ['2 John', '3 John', 'Philemon', 'Jude'],
+    correctAnswer: 1,
+    category: 'general',
+    difficulty: 'medium',
+    verse: 'Various',
+    explanation: '3 John is the shortest book with only 14 verses.',
+    testament: 'new'
+  },
+  {
+    id: 'general_022',
+    question: 'How many books did Paul write in the New Testament?',
+    options: ['10', '11', '12', '13'],
+    correctAnswer: 3,
+    category: 'general',
+    difficulty: 'hard',
+    verse: 'Various',
+    explanation: 'Paul wrote 13 epistles in the New Testament.',
+    testament: 'new'
   }
 ];
 

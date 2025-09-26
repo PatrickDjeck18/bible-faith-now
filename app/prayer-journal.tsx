@@ -3,11 +3,13 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Tex
 import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, Heart, BookOpen, Plus, Check, Clock, Trash2, Sparkles } from 'lucide-react-native';
 import { router } from 'expo-router';
-import { usePrayers } from '@/hooks/usePrayers';
+import { useUnifiedPrayers } from '@/hooks/useUnifiedPrayers';
 import type { Prayer } from '@/lib/supabase';
+import type { GuestPrayer } from '@/utils/guestStorage';
+import AuthGuard from '@/components/auth/AuthGuard';
 
 export default function PrayerJournalScreen() {
-  const { prayers, loading, addPrayer, markPrayerAsAnswered, deletePrayer, refetch } = usePrayers();
+  const { prayers, loading, addPrayer, markPrayerAsAnswered, deletePrayer, refetch } = useUnifiedPrayers();
   const [showAddForm, setShowAddForm] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -70,7 +72,7 @@ const handleMarkAnswered = async (prayerId: string) => {
   }
 };
 
-  const handleDelete = (prayer: Prayer) => {
+  const handleDelete = (prayer: Prayer | GuestPrayer) => {
     Alert.alert(
       'Delete Prayer',
       `Delete "${prayer.title}"?`,
@@ -141,20 +143,24 @@ const handleMarkAnswered = async (prayerId: string) => {
   const activeCount = prayers.filter(p => p.status === 'active').length;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <LinearGradient 
-        colors={['#F8FAFC', '#F1F5F9', '#E2E8F0']} 
-        style={styles.gradient}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <ScrollView 
-          style={styles.scrollView}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          showsVerticalScrollIndicator={false}
+    <AuthGuard
+      message="Sign in to save and track your prayers. Your spiritual journey will be saved across all your devices."
+      showGuestWarning={true}
+    >
+      <SafeAreaView style={styles.container}>
+        <LinearGradient
+          colors={['#F8FAFC', '#F1F5F9', '#E2E8F0']}
+          style={styles.gradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
         >
+          <ScrollView
+            style={styles.scrollView}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            showsVerticalScrollIndicator={false}
+          >
           {/* Modern Header */}
           <View style={styles.header}>
             <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
@@ -356,9 +362,10 @@ const handleMarkAnswered = async (prayerId: string) => {
               </LinearGradient>
             </View>
           )}
-        </ScrollView>
-      </LinearGradient>
-    </SafeAreaView>
+          </ScrollView>
+        </LinearGradient>
+      </SafeAreaView>
+    </AuthGuard>
   );
 }
 

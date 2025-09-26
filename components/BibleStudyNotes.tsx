@@ -1,8 +1,10 @@
+
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, TextInput, ScrollView, Alert, Animated, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Edit3, Trash2, Plus, BookOpen, Tag, Palette, Check } from 'lucide-react-native';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../constants/DesignTokens';
+import EditNoteModal from './EditNoteModal';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -29,12 +31,12 @@ interface BibleStudyNotesProps {
 const backgroundOptions = [
   { id: 'default', name: 'Default', type: 'color', value: Colors.glass.card },
   { id: 'spiritual', name: 'Spiritual', type: 'gradient', value: Colors.gradients.spiritual },
-  { id: 'sunset', name: 'Sunset', type: 'gradient', value: Colors.gradients.etherealSunset },
-  { id: 'ocean', name: 'Ocean', type: 'gradient', value: Colors.gradients.oceanBreeze },
-  { id: 'nature', name: 'Nature', type: 'gradient', value: Colors.gradients.sacredGarden },
-  { id: 'golden', name: 'Golden', type: 'gradient', value: Colors.gradients.goldenHour },
-  { id: 'aurora', name: 'Aurora', type: 'gradient', value: Colors.gradients.aurora },
-  { id: 'cosmic', name: 'Cosmic', type: 'gradient', value: Colors.gradients.cosmic },
+  { id: 'sunset', name: 'Sunset', type: 'gradient', value: Colors.gradients.sunset },
+  { id: 'ocean', name: 'Ocean', type: 'gradient', value: Colors.gradients.ocean },
+  { id: 'nature', name: 'Nature', type: 'gradient', value: Colors.gradients.nature },
+  { id: 'golden', name: 'Golden', type: 'gradient', value: Colors.gradients.dawn },
+  { id: 'aurora', name: 'Aurora', type: 'gradient', value: Colors.gradients.vibrant },
+  { id: 'cosmic', name: 'Cosmic', type: 'gradient', value: Colors.gradients.purple },
   { id: 'light', name: 'Light', type: 'gradient', value: Colors.gradients.spiritualLight },
 ];
 
@@ -46,7 +48,8 @@ export const BibleStudyNotes: React.FC<BibleStudyNotesProps> = ({
   onNotePress,
 }) => {
   const [isAddingNote, setIsAddingNote] = useState(false);
-  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingNote, setEditingNote] = useState<StudyNote | null>(null);
   const [showColorPicker, setShowColorPicker] = useState<string | null>(null);
   const [newNote, setNewNote] = useState({
     reference: '',
@@ -55,7 +58,6 @@ export const BibleStudyNotes: React.FC<BibleStudyNotesProps> = ({
     backgroundColor: Colors.glass.card,
     gradientColors: undefined as string[] | undefined,
   });
-  const [editingNote, setEditingNote] = useState<StudyNote | null>(null);
 
   const handleAddNote = () => {
     if (!newNote.reference.trim() || !newNote.content.trim()) {
@@ -76,20 +78,16 @@ export const BibleStudyNotes: React.FC<BibleStudyNotesProps> = ({
   };
 
   const handleStartEdit = (note: StudyNote) => {
-    setEditingNoteId(note.id);
     setEditingNote(note);
+    setShowEditModal(true);
   };
 
-  const handleSaveEdit = () => {
-    if (!editingNote) return;
-
-    onUpdateNote(editingNote.id, {
-      content: editingNote.content,
-      tags: editingNote.tags,
+  const handleSaveEdit = (id: string, updates: Partial<StudyNote>) => {
+    onUpdateNote(id, {
+      ...updates,
       lastModified: Date.now(),
     });
-
-    setEditingNoteId(null);
+    setShowEditModal(false);
     setEditingNote(null);
   };
 
@@ -285,64 +283,46 @@ export const BibleStudyNotes: React.FC<BibleStudyNotesProps> = ({
                   </View>
                 </View>
 
-              {editingNoteId === note.id && editingNote ? (
-                <View style={styles.editForm}>
-                  <TextInput
-                    style={[styles.input, styles.contentInput]}
-                    value={editingNote.content}
-                    onChangeText={(text) => setEditingNote({ ...editingNote, content: text })}
-                    multiline
-                    numberOfLines={4}
-                  />
-                  <View style={styles.formActions}>
-                    <TouchableOpacity 
-                      style={styles.cancelButton}
-                      onPress={() => setEditingNoteId(null)}
-                    >
-                      <Text style={styles.cancelButtonText}>Cancel</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={styles.saveButton}
-                      onPress={handleSaveEdit}
-                    >
-                      <Text style={styles.saveButtonText}>Save</Text>
-                    </TouchableOpacity>
+                <Text style={styles.noteContent} numberOfLines={3}>
+                  {note.content}
+                </Text>
+                
+                {note.tags.length > 0 && (
+                  <View style={styles.tagsContainer}>
+                    {note.tags.map((tag, index) => (
+                      <View key={index} style={styles.tag}>
+                        <Tag size={12} color={Colors.primary[600]} />
+                        <Text style={styles.tagText}>{tag}</Text>
+                        <TouchableOpacity
+                          onPress={() => removeTag(note, tag)}
+                          style={styles.removeTagButton}
+                        >
+                          <Text style={styles.removeTagText}>×</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))}
                   </View>
-                </View>
-              ) : (
-                <>
-                  <Text style={styles.noteContent} numberOfLines={3}>
-                    {note.content}
-                  </Text>
-                  
-                  {note.tags.length > 0 && (
-                    <View style={styles.tagsContainer}>
-                      {note.tags.map((tag, index) => (
-                        <View key={index} style={styles.tag}>
-                          <Tag size={12} color={Colors.primary[600]} />
-                          <Text style={styles.tagText}>{tag}</Text>
-                          <TouchableOpacity
-                            onPress={() => removeTag(note, tag)}
-                            style={styles.removeTagButton}
-                          >
-                            <Text style={styles.removeTagText}>×</Text>
-                          </TouchableOpacity>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                  
-                  <Text style={styles.noteTimestamp}>
-                    {new Date(note.lastModified).toLocaleDateString()}
-                  </Text>
-                </>
-              )}
+                )}
+                
+                <Text style={styles.noteTimestamp}>
+                  {new Date(note.lastModified).toLocaleDateString()}
+                </Text>
               </TouchableOpacity>
               {showColorPicker === note.id && <ColorPicker noteId={note.id} />}
             </View>
           ))
         )}
       </ScrollView>
+
+      <EditNoteModal
+        isVisible={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingNote(null);
+        }}
+        onUpdateNote={handleSaveEdit}
+        note={editingNote}
+      />
     </View>
   );
 };
@@ -461,9 +441,6 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     backgroundColor: 'transparent',
   },
-  editForm: {
-    marginTop: Spacing.sm,
-  },
   noteContent: {
     fontSize: Typography.sizes.lg,
     color: Colors.neutral[700],
@@ -572,5 +549,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-
-

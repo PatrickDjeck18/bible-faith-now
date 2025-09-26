@@ -5,18 +5,16 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { initializeAdMob } from '../lib/adMobService';
-import { revenueCatService } from '../lib/revenueCatService';
 
 export default function RootLayout() {
   useEffect(() => {
-    // Initialize AdMob and RevenueCat services
+    // Initialize AdMob service
     const initializeServices = async () => {
       try {
         await initializeAdMob();
-        await revenueCatService.initialize();
-        console.log('AdMob and RevenueCat services initialized successfully');
+        console.log('AdMob service initialized successfully');
       } catch (error) {
-        console.error('Failed to initialize ad services:', error);
+        console.error('Failed to initialize ad service:', error);
       }
     };
 

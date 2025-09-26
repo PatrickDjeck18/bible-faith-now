@@ -11,7 +11,6 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { X, Crown, CheckCircle, Star, Zap } from 'lucide-react-native';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '@/constants/DesignTokens';
-import { revenueCatService } from '@/lib/revenueCatService';
 import { useAds } from '@/hooks/useAds';
 
 interface PremiumPurchaseModalProps {
@@ -39,13 +38,9 @@ const PremiumPurchaseModal: React.FC<PremiumPurchaseModalProps> = ({
   const loadPackages = async () => {
     try {
       setLoading(true);
-      const availablePackages = await revenueCatService.getAvailablePackages();
-      setPackages(availablePackages);
-      
-      // Select the first package by default
-      if (availablePackages.length > 0) {
-        setSelectedPackage(availablePackages[0]);
-      }
+      // Since RevenueCat is removed, no packages are available
+      setPackages([]);
+      setSelectedPackage(null);
     } catch (error) {
       console.error('Error loading packages:', error);
       Alert.alert('Error', 'Failed to load purchase options');
@@ -55,18 +50,16 @@ const PremiumPurchaseModal: React.FC<PremiumPurchaseModalProps> = ({
   };
 
   const handlePurchase = async () => {
-    if (!selectedPackage) return;
-
     try {
       setLoading(true);
-      const success = await purchasePremium(selectedPackage);
+      const success = await purchasePremium();
       
       if (success) {
         Alert.alert('Success', '🎉 Thank you for upgrading to Premium! Ads have been removed.');
         onPurchaseSuccess?.();
         onClose();
       } else {
-        Alert.alert('Purchase Failed', 'Please try again or contact support.');
+        Alert.alert('Purchase Failed', 'Premium purchases are not currently available.');
       }
     } catch (error) {
       console.error('Purchase error:', error);
@@ -140,62 +133,34 @@ const PremiumPurchaseModal: React.FC<PremiumPurchaseModalProps> = ({
               ))}
             </View>
 
-            {/* Package Selection */}
-            {loading && packages.length === 0 ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={Colors.primary[500]} />
-                <Text style={styles.loadingText}>Loading options...</Text>
+            {/* Package Selection - Disabled since RevenueCat is removed */}
+            <View style={styles.packages}>
+              <View style={styles.disabledPackage}>
+                <Text style={styles.disabledPackageText}>
+                  Premium purchases are not currently available
+                </Text>
+                <Text style={styles.disabledPackageSubtext}>
+                  In-app purchases have been temporarily disabled
+                </Text>
               </View>
-            ) : (
-              <View style={styles.packages}>
-                {packages.map((pkg) => (
-                  <TouchableOpacity
-                    key={pkg.identifier}
-                    style={[
-                      styles.packageButton,
-                      selectedPackage?.identifier === pkg.identifier && styles.selectedPackage,
-                    ]}
-                    onPress={() => setSelectedPackage(pkg)}
-                    disabled={loading}
-                  >
-                    <View style={styles.packageContent}>
-                      <View style={styles.packageHeader}>
-                        <Text style={styles.packageTitle}>
-                          {pkg.product.title}
-                        </Text>
-                        <Text style={styles.packagePrice}>
-                          {pkg.product.priceString}
-                        </Text>
-                      </View>
-                      <Text style={styles.packageDescription}>
-                        {pkg.product.description}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
+            </View>
 
             {/* Action Buttons */}
             <View style={styles.actions}>
               <TouchableOpacity
-                style={[styles.purchaseButton, loading && styles.disabledButton]}
+                style={[styles.purchaseButton, styles.disabledButton]}
                 onPress={handlePurchase}
-                disabled={loading || !selectedPackage}
+                disabled={true}
               >
-                {loading ? (
-                  <ActivityIndicator size="small" color="white" />
-                ) : (
-                  <Text style={styles.purchaseButtonText}>
-                    {selectedPackage ? `Purchase ${selectedPackage.product.priceString}` : 'Select a Plan'}
-                  </Text>
-                )}
+                <Text style={styles.purchaseButtonText}>
+                  Premium Unavailable
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.restoreButton, loading && styles.disabledButton]}
+                style={[styles.restoreButton, styles.disabledButton]}
                 onPress={handleRestore}
-                disabled={loading}
+                disabled={true}
               >
                 <Text style={styles.restoreButtonText}>Restore Purchases</Text>
               </TouchableOpacity>
@@ -275,6 +240,26 @@ const styles = StyleSheet.create({
   },
   packages: {
     marginBottom: Spacing.xl,
+  },
+  disabledPackage: {
+    backgroundColor: Colors.neutral[100],
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.xl,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.neutral[300],
+  },
+  disabledPackageText: {
+    fontSize: Typography.sizes.lg,
+    fontWeight: Typography.weights.semiBold,
+    color: Colors.neutral[700],
+    textAlign: 'center',
+    marginBottom: Spacing.xs,
+  },
+  disabledPackageSubtext: {
+    fontSize: Typography.sizes.sm,
+    color: Colors.neutral[600],
+    textAlign: 'center',
   },
   packageButton: {
     backgroundColor: Colors.neutral[50],

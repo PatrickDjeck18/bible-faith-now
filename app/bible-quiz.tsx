@@ -29,7 +29,7 @@ import {
   Zap,
   Play,
 } from 'lucide-react-native';
-import { useFirebaseQuiz } from '@/hooks/useFirebaseQuiz';
+import { useSupabaseQuiz } from '@/hooks/useSupabaseQuiz';
 import { AdManager } from '../lib/adMobService';
 import { ADS_CONFIG } from '../lib/adsConfig';
 
@@ -55,8 +55,9 @@ export default function BibleQuizScreen() {
     completeQuiz,
     getCurrentQuestion,
     getProgress,
-    stats
-  } = useFirebaseQuiz();
+    stats,
+    loading
+  } = useSupabaseQuiz();
   
   // Animation refs
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -82,6 +83,8 @@ export default function BibleQuizScreen() {
   const [showRewardAdButton, setShowRewardAdButton] = useState(false);
   const [isAdLoading, setIsAdLoading] = useState(false);
   const [extraTimeUsed, setExtraTimeUsed] = useState(false);
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [completionData, setCompletionData] = useState<any>(null);
 
   const currentQuestion = getCurrentQuestion();
   const progress = getProgress();
@@ -258,17 +261,27 @@ export default function BibleQuizScreen() {
     setSelectedAnswer(null);
     setShowResult(false);
     setTimeRemaining(30);
-    
-    if (progress.current >= progress.total) {
+
+    console.log('handleNextQuestion called:', {
+      progressCurrent: progress.current,
+      progressTotal: progress.total,
+      quizStateIsCompleted: quizState.isCompleted,
+      currentQuestionIndex: quizState.currentQuestionIndex,
+      questionsLength: quizState.questions.length
+    });
+
+    if (progress.current >= progress.total || quizState.isCompleted) {
+      console.log('Quiz completed, calling handleQuizComplete');
       handleQuizComplete();
     } else {
+      console.log('Moving to next question');
       nextQuestion();
-      
+
       // Reset animations for next question
       fadeAnim.setValue(0);
       slideAnim.setValue(50);
       scaleAnim.setValue(0.9);
-      
+
       // Restart entry animations
       Animated.parallel([
         Animated.timing(fadeAnim, {
@@ -296,9 +309,9 @@ export default function BibleQuizScreen() {
     const finalScore = quizStats.score;
     const accuracy = Math.round((quizStats.correctAnswers / quizStats.totalQuestions) * 100);
     const timeTaken = Math.floor((Date.now() - startTime) / 1000);
-    
+
     await completeQuiz(finalScore, timeTaken);
-    
+
     const getGradeInfo = () => {
       if (accuracy >= 90) return { grade: 'A+', color: '#10B981', emoji: '🏆', message: 'Outstanding!' };
       if (accuracy >= 80) return { grade: 'A', color: '#059669', emoji: '🌟', message: 'Excellent!' };
@@ -307,24 +320,33 @@ export default function BibleQuizScreen() {
       return { grade: 'D', color: '#EF4444', emoji: '📚', message: 'Keep studying!' };
     };
 
+    const getLevelInfo = () => {
+      const currentLevel = Math.floor(stats.totalScore / 1000) + 1;
+      const nextLevelScore = currentLevel * 1000;
+      const progressToNext = (stats.totalScore % 1000) / 10;
+
+      return {
+        currentLevel,
+        nextLevelScore,
+        progressToNext,
+        isLevelUp: finalScore >= 100 // Level up if score is 100 or more
+      };
+    };
+
     const gradeInfo = getGradeInfo();
-    
-    Alert.alert(
-      `Quiz Complete! ${gradeInfo.emoji}`,
-      `Final Score: ${finalScore} points\nCorrect: ${quizStats.correctAnswers}/${quizStats.totalQuestions}\nAccuracy: ${accuracy}%\nGrade: ${gradeInfo.grade}\n\n${gradeInfo.message}`,
-      [
-        {
-          text: 'Play Again',
-          onPress: () => {
-            initializeQuiz();
-          }
-        },
-        {
-          text: 'Back to Menu',
-          onPress: () => router.back()
-        }
-      ]
-    );
+    const levelInfo = getLevelInfo();
+
+    const completionData = {
+      finalScore,
+      accuracy,
+      gradeInfo,
+      levelInfo,
+      quizStats,
+      timeTaken
+    };
+
+    setCompletionData(completionData);
+    setShowCompletionModal(true);
   };
 
   const getAnswerStyle = (index: number) => {
@@ -369,7 +391,7 @@ export default function BibleQuizScreen() {
     return null;
   };
 
-  if (isLoading) {
+  if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <LinearGradient
@@ -400,7 +422,7 @@ export default function BibleQuizScreen() {
     );
   }
 
-  if (!currentQuestion) {
+  if (!currentQuestion || quizState.isCompleted) {
     return (
       <SafeAreaView style={styles.container}>
         <LinearGradient
@@ -408,24 +430,147 @@ export default function BibleQuizScreen() {
           style={StyleSheet.absoluteFillObject}
         />
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>No questions available. Please try again.</Text>
+          <Text style={styles.loadingText}>
+            {quizState.isCompleted ? 'Quiz completed!' : 'No questions available. Please try again.'}
+          </Text>
           <TouchableOpacity style={styles.retryButton} onPress={initializeQuiz}>
-            <Text style={styles.retryButtonText}>Retry</Text>
+            <Text style={styles.retryButtonText}>Play Again</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
   }
 
+  // Completion Modal Component
+  const renderCompletionModal = () => {
+    if (!showCompletionModal || !completionData) return null;
+
+    const { finalScore, accuracy, gradeInfo, levelInfo, quizStats, timeTaken } = completionData;
+
+    return (
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <LinearGradient
+            colors={levelInfo.isLevelUp
+              ? [Colors.success[400], Colors.success[600]]
+              : [Colors.primary[400], Colors.primary[600]]
+            }
+            style={styles.modalHeader}
+          >
+            <Text style={styles.modalTitle}>
+              {levelInfo.isLevelUp ? '🎉 Level Up!' : 'Quiz Complete!'} {gradeInfo.emoji}
+            </Text>
+          </LinearGradient>
+
+          <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+            {/* Score Summary */}
+            <View style={styles.scoreSection}>
+              <Text style={styles.sectionTitle}>Final Score</Text>
+              <Text style={styles.finalScore}>{finalScore}</Text>
+              <Text style={styles.scoreLabel}>points</Text>
+            </View>
+
+            {/* Performance Stats */}
+            <View style={styles.statsGrid}>
+              <View style={styles.statItemModal}>
+                <Text style={styles.statValue}>{accuracy}%</Text>
+                <Text style={styles.statLabel}>Accuracy</Text>
+              </View>
+              <View style={styles.statItemModal}>
+                <Text style={styles.statValue}>{quizStats.correctAnswers}/{quizStats.totalQuestions}</Text>
+                <Text style={styles.statLabel}>Correct</Text>
+              </View>
+              <View style={styles.statItemModal}>
+                <Text style={styles.statValue}>{timeTaken}s</Text>
+                <Text style={styles.statLabel}>Time</Text>
+              </View>
+              <View style={styles.statItemModal}>
+                <Text style={styles.statValue}>{quizStats.currentStreak}</Text>
+                <Text style={styles.statLabel}>Best Streak</Text>
+              </View>
+            </View>
+
+            {/* Grade */}
+            <View style={styles.gradeSection}>
+              <Text style={styles.sectionTitle}>Grade</Text>
+              <View style={[styles.gradeBadge, { backgroundColor: gradeInfo.color + '20' }]}>
+                <Text style={[styles.gradeText, { color: gradeInfo.color }]}>
+                  {gradeInfo.grade}
+                </Text>
+              </View>
+              <Text style={styles.gradeMessage}>{gradeInfo.message}</Text>
+            </View>
+
+            {/* Level Progress */}
+            <View style={styles.levelSection}>
+              <Text style={styles.sectionTitle}>Level Progress</Text>
+              <View style={styles.levelInfo}>
+                <Text style={styles.levelText}>Level {levelInfo.currentLevel}</Text>
+                <Text style={styles.levelProgress}>
+                  {stats.totalScore} / {levelInfo.nextLevelScore} XP
+                </Text>
+              </View>
+              <View style={styles.levelBar}>
+                <View
+                  style={[
+                    styles.levelFill,
+                    {
+                      width: `${Math.min(levelInfo.progressToNext, 100)}%`,
+                      backgroundColor: levelInfo.isLevelUp ? Colors.success[500] : Colors.primary[500]
+                    }
+                  ]}
+                />
+              </View>
+              {levelInfo.isLevelUp && (
+                <Text style={styles.levelUpMessage}>
+                  🎉 Congratulations! You've advanced to Level {levelInfo.currentLevel + 1}!
+                </Text>
+              )}
+            </View>
+          </ScrollView>
+
+          {/* Action Buttons */}
+          <View style={styles.modalActions}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.playAgainButton]}
+              onPress={() => {
+                setShowCompletionModal(false);
+                setCompletionData(null);
+                initializeQuiz();
+              }}
+            >
+              <Play size={20} color={Colors.neutral[50]} />
+              <Text style={styles.actionButtonText}>Play Again</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionButton, styles.menuButton]}
+              onPress={() => {
+                setShowCompletionModal(false);
+                setCompletionData(null);
+                router.back();
+              }}
+            >
+              <Text style={styles.menuButtonText}>Quiz Menu</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-      
+
       {/* Background Gradient */}
       <LinearGradient
         colors={Colors.gradients.spiritualLight}
         style={StyleSheet.absoluteFillObject}
       />
+
+      {/* Completion Modal */}
+      {renderCompletionModal()}
 
       {/* Header */}
       <View style={styles.hero}>
@@ -474,30 +619,6 @@ export default function BibleQuizScreen() {
           </View>
         </View>
 
-        {/* Reward Ad Button */}
-        {showRewardAdButton && (
-          <View style={styles.rewardAdContainer}>
-            <TouchableOpacity
-              style={styles.rewardAdButton}
-              onPress={handleWatchRewardAd}
-              disabled={isAdLoading}
-            >
-              <LinearGradient
-                colors={['#F59E0B', '#FBBF24']}
-                style={styles.rewardAdGradient}
-              >
-                {isAdLoading ? (
-                  <ActivityIndicator color="white" size="small" />
-                ) : (
-                  <View style={styles.rewardAdContent}>
-                    <Zap size={16} color="white" />
-                    <Text style={styles.rewardAdText}>Get +15s</Text>
-                  </View>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
-        )}
 
       {/* Progress Bar */}
       <View style={styles.progressContainer}>
@@ -559,7 +680,7 @@ export default function BibleQuizScreen() {
 
         {/* Answer Options */}
         <View style={styles.optionsContainer}>
-          {currentQuestion.options.map((option, index) => (
+          {currentQuestion.options?.map((option: string, index: number) => (
             <Animated.View
               key={index}
               style={[
@@ -965,5 +1086,184 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.base,
     fontWeight: Typography.weights.bold,
     color: Colors.neutral[50],
+  },
+  // Modal Styles
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+    paddingTop: Platform.OS === 'ios' ? 40 : 0,
+  },
+  modalContent: {
+    backgroundColor: Colors.neutral[50],
+    borderRadius: BorderRadius.xl,
+    width: screenWidth * 0.95,
+    maxHeight: screenHeight * 0.85,
+    overflow: 'hidden',
+    ...Shadows.xl,
+    marginHorizontal: Spacing.md,
+    marginVertical: Spacing.md,
+  },
+  modalHeader: {
+    padding: Spacing.lg,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: Typography.sizes['2xl'],
+    fontWeight: Typography.weights.bold,
+    color: Colors.neutral[50],
+    textAlign: 'center',
+    paddingHorizontal: Spacing.sm,
+  },
+  modalBody: {
+    padding: Spacing.md,
+    maxHeight: screenHeight * 0.55,
+    paddingBottom: Spacing.sm,
+  },
+  scoreSection: {
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+    paddingHorizontal: Spacing.sm,
+  },
+  sectionTitle: {
+    fontSize: Typography.sizes.lg,
+    fontWeight: Typography.weights.semiBold,
+    color: Colors.neutral[700],
+    marginBottom: Spacing.sm,
+  },
+  finalScore: {
+    fontSize: screenWidth > 400 ? Typography.sizes['5xl'] : Typography.sizes['4xl'],
+    fontWeight: Typography.weights.bold,
+    color: Colors.primary[600],
+    lineHeight: Typography.sizes['5xl'] * 1.2,
+  },
+  scoreLabel: {
+    fontSize: Typography.sizes.base,
+    color: Colors.neutral[600],
+    marginTop: Spacing.xs,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.lg,
+    gap: Spacing.sm,
+  },
+  statItemModal: {
+    width: '48%',
+    backgroundColor: Colors.neutral[100],
+    padding: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    alignItems: 'center',
+    marginBottom: Spacing.xs,
+    minHeight: 80,
+    justifyContent: 'center',
+  },
+  statValue: {
+    fontSize: Typography.sizes['2xl'],
+    fontWeight: Typography.weights.bold,
+    color: Colors.primary[600],
+    marginBottom: Spacing.xs,
+  },
+  statLabel: {
+    fontSize: Typography.sizes.sm,
+    color: Colors.neutral[600],
+  },
+  gradeSection: {
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+    paddingHorizontal: Spacing.sm,
+  },
+  gradeBadge: {
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.full,
+    marginBottom: Spacing.sm,
+  },
+  gradeText: {
+    fontSize: Typography.sizes['2xl'],
+    fontWeight: Typography.weights.bold,
+  },
+  gradeMessage: {
+    fontSize: Typography.sizes.base,
+    color: Colors.neutral[600],
+    textAlign: 'center',
+    lineHeight: Typography.sizes.base * 1.4,
+  },
+  levelSection: {
+    marginBottom: Spacing.lg,
+    paddingHorizontal: Spacing.sm,
+  },
+  levelInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  levelText: {
+    fontSize: Typography.sizes.lg,
+    fontWeight: Typography.weights.bold,
+    color: Colors.neutral[700],
+  },
+  levelProgress: {
+    fontSize: Typography.sizes.base,
+    color: Colors.neutral[600],
+  },
+  levelBar: {
+    height: 8,
+    backgroundColor: Colors.neutral[200],
+    borderRadius: BorderRadius.full,
+    overflow: 'hidden',
+  },
+  levelFill: {
+    height: '100%',
+    borderRadius: BorderRadius.full,
+  },
+  levelUpMessage: {
+    fontSize: Typography.sizes.base,
+    color: Colors.success[600],
+    fontWeight: Typography.weights.semiBold,
+    textAlign: 'center',
+    marginTop: Spacing.md,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    padding: Spacing.md,
+    backgroundColor: Colors.neutral[50],
+    paddingBottom: Spacing.lg,
+  },
+  actionButton: {
+    flex: 1,
+    paddingVertical: Spacing.lg,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    minHeight: 48, // Better touch target
+  },
+  playAgainButton: {
+    backgroundColor: Colors.primary[600],
+  },
+  menuButton: {
+    backgroundColor: Colors.neutral[200],
+  },
+  actionButtonText: {
+    fontSize: Typography.sizes.base,
+    fontWeight: Typography.weights.bold,
+    color: Colors.neutral[50],
+  },
+  menuButtonText: {
+    fontSize: Typography.sizes.base,
+    fontWeight: Typography.weights.bold,
+    color: Colors.neutral[700],
   },
 });

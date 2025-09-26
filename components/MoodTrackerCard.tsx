@@ -11,19 +11,20 @@ import {
   Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { 
-  Smile, 
-  TrendingUp, 
-  BarChart3, 
-  Calendar, 
-  Zap, 
+import {
+  Smile,
+  TrendingUp,
+  BarChart3,
+  Calendar,
+  Zap,
   Sparkles,
   Brain,
   Plus,
   ArrowRight,
 } from 'lucide-react-native';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '@/constants/DesignTokens';
-import { useMoodTracker } from '@/hooks/useMoodTracker';
+import { useUnifiedMoodTracker } from '@/hooks/useUnifiedMoodTracker';
+import type { WeeklyMoodData } from '@/hooks/useMoodTracker';
 import { router } from 'expo-router';
 import { onMoodEntrySaved, offMoodEntrySaved } from '@/lib/eventEmitter';
 
@@ -35,20 +36,24 @@ interface MoodTrackerCardProps {
 }
 
 export default function MoodTrackerCard({ onPress, compact = false }: MoodTrackerCardProps) {
-  const { moodStats, loading, refetch } = useMoodTracker();
+  const { moodStats, loading, refetch } = useUnifiedMoodTracker();
   const [showInsights, setShowInsights] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const todaysMood = moodStats.todaysMood;
   const todayDate = new Date().toISOString().split('T')[0];
-  
+
+  // Debug logging
+  console.log('🔴 MOOD CARD: todaysMood:', todaysMood);
+  console.log('🔴 MOOD CARD: moodStats:', moodStats);
+  console.log('🔴 MOOD CARD: loading:', loading);
+
   const weeklyMoods = moodStats.weeklyData.map((d: { date: string; mood: string | null; mood_id: string | null; rating: number | null; emoji: string | null }) => ({
     ...d,
     day: new Date(d.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' }),
     isToday: d.date === todayDate
   }));
-  
 
   // Listen for mood entry saved events and refresh data
   useEffect(() => {
@@ -60,12 +65,12 @@ export default function MoodTrackerCard({ onPress, compact = false }: MoodTracke
 
     // Use cross-platform event emitter
     onMoodEntrySaved(handleMoodSaved);
-    
+
     // Also listen to web events for web platform compatibility
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       window.addEventListener('moodEntrySaved', handleMoodSaved);
     }
-    
+
     return () => {
       offMoodEntrySaved(handleMoodSaved);
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -107,65 +112,7 @@ export default function MoodTrackerCard({ onPress, compact = false }: MoodTracke
     return Colors.gradients.spiritualLight;
   };
 
-  const getMoodDisplayName = (moodId: string | null, moodType: string | null) => {
-    if (!moodId && !moodType) return '';
-    
-    // If we have mood_id, derive the name from it
-    if (moodId) {
-      const moodData = getMoodData(moodId);
-      if (moodData && moodData.label) {
-        // Extract the text part after the emoji
-        const parts = moodData.label.split(' ');
-        return parts.slice(1).join(' ');
-      }
-    }
-    
-    // Fallback to mood_type mapping
-    if (moodType) {
-      const moodNameMap: { [key: string]: string } = {
-        'Happy': 'Happy',
-        'Joyful': 'Joyful',
-        'Blessed': 'Blessed',
-        'Grateful': 'Grateful',
-        'Excited': 'Excited',
-        'Loved': 'Loved',
-        'Proud': 'Proud',
-        'Peaceful': 'Peaceful',
-        'Calm': 'Calm',
-        'Content': 'Content',
-        'Prayerful': 'Prayerful',
-        'Motivated': 'Motivated',
-        'Focused': 'Focused',
-        'Creative': 'Creative',
-        'Inspired': 'Inspired',
-        'Accomplished': 'Accomplished',
-        'Sad': 'Sad',
-        'Anxious': 'Anxious',
-        'Stressed': 'Stressed',
-        'Angry': 'Angry',
-        'Frustrated': 'Frustrated',
-        'Tired': 'Tired',
-        'Lonely': 'Lonely',
-        'Confused': 'Confused',
-        'Fearful': 'Fearful',
-        'Curious': 'Curious',
-        'Surprised': 'Surprised',
-        'Hopeful': 'Hopeful',
-        'Connected': 'Connected',
-        'Faithful': 'Faithful',
-        'Healthy': 'Healthy',
-        'Rested': 'Rested',
-        'Balanced': 'Balanced',
-        'Neutral': 'Neutral',
-        'Worried': 'Worried'
-      };
-      return moodNameMap[moodType] || moodType;
-    }
-    
-    return '';
-  };
-
-  const getMoodData = (moodId: string) => {
+  const getAllMoods = () => {
     const moodCategories = {
       positive: {
         moods: [
@@ -234,17 +181,12 @@ export default function MoodTrackerCard({ onPress, compact = false }: MoodTracke
     Object.values(moodCategories).forEach(category => {
       category.moods.forEach(mood => allMoods.push(mood));
     });
-
-    return allMoods.find(mood => mood.id === moodId) || {
-      id: 'unknown',
-      label: '❓ Unknown',
-      gradient: ['#6B7280', '#4B5563', '#374151'] as const
-    };
+    return allMoods;
   };
 
   const getMoodMessage = (rating: number | null | undefined) => {
     if (!rating) return 'How are you feeling today?';
-    
+
     if (rating >= 8) return 'You\'re radiating positivity! ✨';
     if (rating >= 6) return 'You\'re doing great! Keep it up! 🌟';
     if (rating >= 4) return 'You\'re making progress! 💪';
@@ -253,13 +195,32 @@ export default function MoodTrackerCard({ onPress, compact = false }: MoodTracke
 
   const getMoodInsight = () => {
     if (moodStats.totalEntries === 0) return 'Start tracking your mood to gain insights!';
-    
-    const positiveDays = moodStats.weeklyData.filter(d => d.rating && d.rating >= 6).length;
+
+    const positiveDays = moodStats.weeklyData.filter((d: WeeklyMoodData) => d.rating && d.rating >= 6).length;
     const positivePercentage = Math.round((positiveDays / 7) * 100);
-    
+
     if (positivePercentage >= 70) return '🌟 Amazing week! You\'ve been positive most days.';
     if (positivePercentage >= 50) return '✨ Good balance! Keep nurturing your spiritual well-being.';
     return '💭 Every emotion is part of your journey. You\'re growing through it all.';
+  };
+
+  const getMoodDisplayName = (moodId: string | null, moodType?: string | null) => {
+    // If we have moodType from database, use it directly
+    if (moodType) {
+      return moodType;
+    }
+
+    // If we have moodId, look it up in the predefined moods
+    if (moodId) {
+      const allMoods = getAllMoods();
+      const mood = allMoods.find(m => m.id === moodId);
+
+      if (mood) {
+        return mood.label;
+      }
+    }
+
+    return 'Unknown Mood';
   };
 
   const handlePress = () => {
@@ -313,25 +274,25 @@ export default function MoodTrackerCard({ onPress, compact = false }: MoodTracke
               <View>
                 <Text style={styles.title}>Today's Mood</Text>
                 <Text style={styles.subtitle}>
-                 {todaysMood ? 
+                 {todaysMood ?
     `${getMoodDisplayName(todaysMood.mood_id ?? null, todaysMood.mood_type)} • ${getMoodMessage(todaysMood.intensity_rating)}` :
     'Track your mood today'
-}
+ }
                 </Text>
                 {todaysMood?.created_at && (
                   <Text style={styles.moodTime}>
-                    Recorded at {new Date(todaysMood.created_at).toLocaleTimeString('en-US', { 
-                      hour: 'numeric', 
+                    Recorded at {new Date(todaysMood.created_at).toLocaleTimeString('en-US', {
+                      hour: 'numeric',
                       minute: '2-digit',
-                      hour12: true 
+                      hour12: true
                     })}
                   </Text>
                 )}
               </View>
             </View>
-            
+
             <View style={styles.headerRight}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.addButton}
                 onPress={() => router.push('/(tabs)/mood-tracker')}
               >
@@ -347,13 +308,13 @@ export default function MoodTrackerCard({ onPress, compact = false }: MoodTracke
             <Text style={styles.statLabel}>Streak</Text>
             <Text style={styles.statNumber}>{moodStats.currentStreak}</Text>
           </View>
-          
+
           <View style={styles.statItem}>
             <BarChart3 size={16} color={Colors.primary[600]} />
             <Text style={styles.statLabel}>Avg</Text>
             <Text style={styles.statNumber}>{moodStats.averageWeekly.toFixed(1)}</Text>
           </View>
-          
+
           <View style={styles.statItem}>
             <Calendar size={16} color={Colors.primary[600]} />
             <Text style={styles.statLabel}>Entries</Text>
@@ -370,7 +331,7 @@ export default function MoodTrackerCard({ onPress, compact = false }: MoodTracke
                 <Brain size={16} color={Colors.primary[600]} opacity={0.8} />
               </TouchableOpacity>
             </View>
-            
+
             <View style={styles.weeklyBars}>
               {weeklyMoods.map((mood: any, index: number) => (
                 <View key={index} style={styles.weeklyBarContainer}>
@@ -393,30 +354,6 @@ export default function MoodTrackerCard({ onPress, compact = false }: MoodTracke
                 </View>
               ))}
             </View>
-
-            {/* AI Insights */}
-            {showInsights && (
-              <View style={styles.insightsContainer}>
-                <View style={styles.insightsHeader}>
-                  <Sparkles size={14} color={Colors.primary[600]} />
-                  <Text style={styles.insightsTitle}>AI Insight</Text>
-                </View>
-                <Text style={styles.insightsText}>{getMoodInsight()}</Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* Quick Actions */}
-        {!compact && (
-          <View style={styles.actionsContainer}>
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={() => router.push('/(tabs)/mood-tracker')}
-            >
-              <Text style={styles.actionText}>Track Mood</Text>
-              <ArrowRight size={16} color={Colors.primary[600]} />
-            </TouchableOpacity>
           </View>
         )}
       </LinearGradient>
@@ -426,66 +363,93 @@ export default function MoodTrackerCard({ onPress, compact = false }: MoodTracke
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: BorderRadius['3xl'],
-    marginBottom: Spacing['2xl'],
-    ...Shadows.xl,
+    borderRadius: BorderRadius.lg,
+    marginHorizontal: Spacing.md,
+    marginVertical: Spacing.sm,
     overflow: 'hidden',
-    backgroundColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   compactContainer: {
-    marginBottom: Spacing.lg,
-  },
-  gradient: {
-    padding: Spacing['2xl'],
-  },
-  compactGradient: {
-    padding: Spacing.lg,
+    marginHorizontal: Spacing.sm,
+    marginVertical: Spacing.xs,
   },
   loadingContainer: {
-    padding: Spacing['2xl'],
+    padding: Spacing.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.neutral[100],
+    backgroundColor: Colors.neutral[50],
   },
   loadingText: {
-    marginTop: Spacing.sm,
-    fontSize: Typography.sizes.sm,
+    fontSize: Typography.sizes.base,
+    fontWeight: Typography.weights.medium,
     color: Colors.neutral[600],
+    marginTop: Spacing.sm,
   },
-  
-  // Header
+  refreshOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  gradient: {
+    padding: Spacing.lg,
+    minHeight: 200,
+  },
+  compactGradient: {
+    padding: Spacing.md,
+    minHeight: 160,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.lg,
   },
   headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
+    flex: 1,
   },
   iconContainer: {
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     borderRadius: BorderRadius.full,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.md,
+  },
+  moodEmoji: {
+    fontSize: 24,
   },
   title: {
-    fontSize: Typography.sizes['2xl'],
-    fontWeight: Typography.weights.bold,
+    fontSize: Typography.sizes.lg,
+    fontWeight: Typography.weights.semiBold,
     color: Colors.neutral[900],
-    textShadowColor: 'rgba(0, 0, 0, 0.2)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    marginBottom: Spacing.xs,
   },
   subtitle: {
     fontSize: Typography.sizes.base,
+    fontWeight: Typography.weights.medium,
     color: Colors.neutral[800],
-    opacity: 0.9,
-    marginTop: Spacing.xs,
+    marginBottom: Spacing.xs,
+  },
+  moodTime: {
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.regular,
+    color: Colors.neutral[600],
   },
   headerRight: {
     alignItems: 'flex-end',
@@ -495,47 +459,36 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: BorderRadius.full,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
   },
-  moodEmoji: {
-    fontSize: 24,
-    textAlign: 'center',
-  },
-  moodTime: {
-    fontSize: Typography.sizes.xs,
-    color: Colors.neutral[700],
-    opacity: 0.8,
-    marginTop: Spacing.xs,
-  },
-  
-  // Stats
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginBottom: Spacing.xl,
-    padding: Spacing.md,
+    marginBottom: Spacing.lg,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: BorderRadius.lg,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
   },
   statItem: {
     alignItems: 'center',
-    gap: Spacing.xs,
   },
   statLabel: {
-    fontSize: Typography.sizes.xs,
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.regular,
     color: Colors.neutral[700],
-    opacity: 0.8,
+    marginTop: Spacing.xs,
   },
   statNumber: {
     fontSize: Typography.sizes.lg,
-    fontWeight: Typography.weights.bold,
+    fontWeight: Typography.weights.semiBold,
     color: Colors.neutral[900],
+    marginTop: Spacing.xs,
   },
-  
-  // Weekly Trends
   weeklyContainer: {
-    marginBottom: Spacing.xl,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
   },
   weeklyHeader: {
     flexDirection: 'row',
@@ -544,111 +497,47 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   weeklyTitle: {
-    fontSize: Typography.sizes.lg,
+    fontSize: Typography.sizes.base,
     fontWeight: Typography.weights.semiBold,
     color: Colors.neutral[900],
   },
   weeklyBars: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
+    justifyContent: 'space-between',
   },
   weeklyBarContainer: {
     alignItems: 'center',
-    gap: Spacing.xs,
+    flex: 1,
   },
   weeklyDay: {
-    fontSize: Typography.sizes.xs,
-    color: Colors.neutral[700],
-    opacity: 0.8,
-  },
-  weeklyEmoji: {
     fontSize: Typography.sizes.sm,
-    marginTop: 2,
+    fontWeight: Typography.weights.regular,
+    color: Colors.neutral[600],
+    marginBottom: Spacing.xs,
+  },
+  todayDay: {
+    color: Colors.neutral[900],
+    fontWeight: '600',
   },
   moodContainer: {
     alignItems: 'center',
-    marginTop: 4,
+  },
+  weeklyEmoji: {
+    fontSize: 16,
+    marginBottom: Spacing.xs,
+  },
+  todayEmoji: {
+    fontSize: 20,
   },
   moodName: {
     fontSize: Typography.sizes.xs,
-    color: Colors.neutral[600],
+    fontWeight: Typography.weights.regular,
+    color: Colors.neutral[700],
     textAlign: 'center',
-    marginTop: 2,
-    maxWidth: 50,
   },
   todayMoodName: {
-    fontWeight: Typography.weights.semiBold,
-    color: Colors.primary[700],
-  },
-  todayDay: {
-    fontWeight: Typography.weights.bold,
-    color: Colors.primary[600],
-  },
-  todayEmoji: {
-    fontSize: Typography.sizes.base,
-    fontWeight: Typography.weights.bold,
-  },
-  
-  // Insights
-  insightsContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
-    marginTop: Spacing.md,
-  },
-  insightsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    marginBottom: Spacing.xs,
-  },
-  insightsTitle: {
-    fontSize: Typography.sizes.sm,
-    fontWeight: Typography.weights.semiBold,
     color: Colors.neutral[900],
-  },
-  insightsText: {
-    fontSize: Typography.sizes.sm,
-    color: Colors.neutral[800],
-    opacity: 0.9,
-    lineHeight: Typography.sizes.sm * 1.4,
-  },
-  
-  // Actions
-  actionsContainer: {
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.2)',
-    paddingTop: Spacing.lg,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    padding: Spacing.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderRadius: BorderRadius.lg,
-  },
-  actionText: {
-    fontSize: Typography.sizes.base,
-    fontWeight: Typography.weights.semiBold,
-    color: Colors.neutral[900],
-  },
-  
-  // Refresh overlay
-  refreshOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    zIndex: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: BorderRadius['3xl'],
+    fontWeight: '600',
+    fontSize: 12,
   },
 });
-            

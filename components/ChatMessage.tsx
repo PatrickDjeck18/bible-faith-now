@@ -5,7 +5,8 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Bot, User, Copy, Share } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 // Importing Colors as it's used in the original code, but not directly in the component's logic
-import { Colors } from '@/constants/DesignTokens'; 
+import { Colors } from '@/constants/DesignTokens';
+import { parseSimpleMarkdown } from '@/utils/textFormatting';
 
 // Helper function to handle Firestore Timestamp objects and regular Dates
 const convertTimestampToDate = (timestamp: Date | { toDate: () => Date }): Date => {
@@ -51,6 +52,9 @@ export function ChatMessage({ message, onCopy, onShare }: ChatMessageProps) {
     onShare?.(message.text);
   };
 
+  // Parse the message text for formatting
+  const formattedTextElements = parseSimpleMarkdown(message.text);
+
   return (
     <View style={[
       styles.messageContainer,
@@ -70,7 +74,11 @@ export function ChatMessage({ message, onCopy, onShare }: ChatMessageProps) {
           styles.messageText,
           message.isUser ? styles.userMessageText : styles.aiMessageText
         ]}>
-          {message.text}
+          {formattedTextElements.map((element, index) => (
+            <Text key={index} style={element.style}>
+              {element.text}
+            </Text>
+          ))}
         </Text>
         
         <View style={styles.messageFooter}>

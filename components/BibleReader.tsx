@@ -154,11 +154,8 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Background Gradient */}
-      <LinearGradient
-        colors={Colors.gradients.spiritualLight}
-        style={StyleSheet.absoluteFillObject}
-      />
+      {/* White Background */}
+      <View style={[StyleSheet.absoluteFillObject, { backgroundColor: Colors.white }]} />
       
       {/* Header Card */}
       <View style={styles.hero}>
@@ -297,7 +294,7 @@ export const BibleReader: React.FC<BibleReaderProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: Colors.white,
   },
   // Header Card Styles
   hero: {
@@ -365,7 +362,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: Colors.white,
   },
   contentWrapper: {
     flex: 1,

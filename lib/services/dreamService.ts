@@ -16,6 +16,7 @@ import {
 
 // Note: Ensure your DreamEntry, DreamAnalysisRequest, etc. are defined correctly.
 import { DreamEntry, DreamAnalysisRequest, DreamAnalysisResponse } from '../types/dreams';
+import { config } from '../config';
 
 export class DreamService {
   // Enhanced cache for dreams data with better performance
@@ -32,9 +33,7 @@ export class DreamService {
 
   // Test DeepSeek API connection with timeout
   static async testDeepSeekAPI(): Promise<boolean> {
-    const API_KEY = process.env.EXPO_PUBLIC_DEEPSEEK_API_KEY;
-    
-    if (!API_KEY) {
+    if (!config.deepseek.apiKey) {
       console.log('❌ No DeepSeek API key found');
       return false;
     }
@@ -43,10 +42,10 @@ export class DreamService {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-      const response = await fetch('https://api.deepseek.com/chat/completions', {
+      const response = await fetch(config.deepseek.apiUrl, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${API_KEY}`,
+          'Authorization': `Bearer ${config.deepseek.apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -140,6 +139,8 @@ export class DreamService {
         title: request.dreamTitle,
         description: request.dreamDescription,
         mood: request.mood,
+        // Add a consistent date string for UI formatting
+        date: new Date().toISOString(),
         is_analyzed: false,
         created_at: serverTimestamp(),
         updated_at: serverTimestamp()
@@ -197,6 +198,11 @@ export class DreamService {
     const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions';
     const API_KEY = process.env.EXPO_PUBLIC_DEEPSEEK_API_KEY;
 
+    // Debug logging
+    console.log('🔍 Debug - API Key from process.env:', API_KEY ? '***' + API_KEY.slice(-4) : 'undefined');
+    console.log('🔍 Debug - Config API Key:', config.deepseek.apiKey ? '***' + config.deepseek.apiKey.slice(-4) : 'undefined');
+    console.log('🔍 Debug - Config debug object:', config.debug);
+
     if (!API_KEY) {
       console.log('⚠️ No DeepSeek API key found, using fallback interpretation');
       return this.createBasicInterpretation(request);
@@ -236,10 +242,10 @@ Make the interpretation specific to the dream content, not generic. Reference ac
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.API_TIMEOUT);
 
-      const response = await fetch(DEEPSEEK_API_URL, {
+      const response = await fetch(config.deepseek.apiUrl, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${API_KEY}`,
+          'Authorization': `Bearer ${config.deepseek.apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
